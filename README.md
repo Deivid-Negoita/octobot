@@ -28,8 +28,15 @@ The embedded firmware lives in a separate repository and is not included here.
 
 ## Run the kinematics workbench
 
-The pages load ES modules, so they need an HTTP server. Opening `index.html`
-from the filesystem gives you a blank screen and a CORS error in the console.
+The workbench is a static site, so it also runs on GitHub Pages straight from
+this repository. `.github/workflows/pages.yml` publishes `kinematics/` on every
+push to `main`. Enable it once under **Settings → Pages → Source → GitHub
+Actions**, and the workbench is then live at
+`https://<your-github-username>.github.io/octobot/`.
+
+To run it locally instead: the pages load ES modules, so they need an HTTP
+server. Opening `index.html` from the filesystem gives you a blank screen and a
+CORS error in the console.
 
 ```bash
 cd kinematics/tools

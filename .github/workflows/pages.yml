@@ -1,0 +1,42 @@
+name: Deploy workbench to GitHub Pages
+
+# The workbench is a static site: plain ES modules, Three.js from a CDN, no
+# build step. Only kinematics/ is published, so the site root is the workbench
+# itself rather than the repository root.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'kinematics/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; queue at most one more behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - name: Upload the workbench
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: kinematics
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
