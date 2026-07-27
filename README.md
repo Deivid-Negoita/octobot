@@ -42,11 +42,11 @@ takes a few seconds. A progress bar reports the download.
 Two pages share the model:
 
 **`index.html` — IK workbench.** The CAD model rigs itself on startup. The
-loader finds the feet from the mesh geometry, builds a hip-yaw → shoulder-pitch
-→ knee-pitch chain per leg on the real servo shaft axes, and binds every servo,
-bracket and casing to the link it is screwed to. You then get eight chains named
-`LEG-1` to `LEG-8`. Drag the cyan target and that leg solves toward it in real
-time while the servo angles update. Press `Space` to run a gait.
+loader finds the feet from the mesh geometry, then builds a hip-yaw →
+shoulder-pitch → knee-pitch chain per leg on the real servo shaft axes. It binds
+every servo, bracket and casing to the link it is screwed to. You get eight
+chains named `LEG-1` to `LEG-8`. Drag the cyan target and that leg solves toward
+it in real time while the servo angles update. Press `Space` to run a gait.
 
 **`playground.html` — locomotion sandbox.** Drive the robot with `W A S D` over
 terrain blocks you spawn and drag. The feet land on the block surface or the
