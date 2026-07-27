@@ -1,9 +1,12 @@
 # Kinematics
 
-The workbench answers one question for the physical robot: **given a foot
-position, what angle does each of the three servos in that leg need?** That is
-the inverse kinematics problem. The browser is a convenient place to solve it
-because the CAD model already contains the geometry.
+The workbench answers one question for the physical robot:
+
+> **Given a foot position, what angle does each of the three servos in that leg
+> need?**
+
+That is the inverse kinematics problem. The browser is a convenient place to
+solve it because the CAD model already contains the geometry.
 
 Two pages share the model and take different approaches to it.
 
@@ -15,13 +18,13 @@ Nothing is rigged by hand. `index.html` loads `models/octobot.glb` and derives
 the skeleton from the mesh.
 
 **1. Find the feet.** `detectFeet` samples every mesh vertex that sits within
-0.07 units of the ground plane, then clusters those contacts in XZ with a radius
-that scales to the model. The eight largest clusters are the feet. Sampling is
-strided so a 12 MB mesh stays fast.
+0.07 units of the ground plane. It then clusters those contacts in XZ with a
+radius that scales to the model. The eight largest clusters are the feet.
+Sampling is strided so a 12 MB mesh stays fast.
 
 **2. Build a chain per foot.** Each foot gets a hip-yaw → shoulder-pitch →
 knee-pitch chain. The joint pivots come from the servo geometry rather than from
-a guess: the pivot is the centre of the servo **head** mesh, because the horn
+a guess. The pivot is the centre of the servo **head** mesh, because the horn
 sits exactly on the shaft axis. Anchoring there makes the servo body rotate
 around its own head, so head and body stay coaxial through the full sweep.
 Bounding-box overlap is only the fallback for a servo with no separate head.
@@ -29,9 +32,10 @@ Bounding-box overlap is only the fallback for a servo with no separate head.
 **3. Bind the parts.** `binding.js` assigns every top-level CAD occurrence to a
 bone by centroid distance. The `art_1/2/3` links go to their exact bones by CAD
 name. Servos, casings and brackets go to the link they are screwed to, chosen by
-maximum mesh overlap. Chassis and electronics ride with the body. The bound
-occurrences are reparented into per-bone groups that follow the solved bones
-every frame, so the real printed parts articulate rather than a stick figure.
+maximum mesh overlap. Chassis and electronics ride with the body.
+
+The bound occurrences are reparented into per-bone groups that follow the solved
+bones every frame. The real printed parts articulate, rather than a stick figure.
 
 ---
 
@@ -41,8 +45,9 @@ every frame, so the real printed parts articulate rather than a stick figure.
 
 **FABRIK** (Forward And Backward Reaching Inverse Kinematics) is the default. It
 walks the chain backward from the target to the root, then forward from the root
-to the target, repeating until the end effector is within tolerance. It converges
-in few iterations and it is the only solver here that honours joint constraints.
+to the target. It repeats that pass until the end effector is within tolerance.
+FABRIK converges in few iterations. It is also the only solver here that honours
+joint constraints.
 
 **CCD** (Cyclic Coordinate Descent) rotates one joint at a time to point the end
 effector at the target, iterating down the chain. It is included for comparison.
@@ -117,10 +122,10 @@ Two patterns:
 | Tetrapod | 0.5 | Two alternating groups of four |
 | Wave | 0.75 | A ripple around the body |
 
-The playground uses closed-form IK instead of an iterative solver — yaw plus a
-two-link planar solution per leg — so parts cannot detach and the solve is
-exact. Hinge signs are calibrated at load by probing each servo, because the
-sign depends on how the servo is mounted and the CAD does not record that.
+The playground uses closed-form IK instead of an iterative solver: yaw plus a
+two-link planar solution per leg. Parts cannot detach and the solve is exact.
+Hinge signs are calibrated at load by probing each servo. The sign depends on
+how the servo is mounted, and the CAD does not record that.
 
 ---
 

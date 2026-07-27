@@ -48,8 +48,8 @@ stepping. A software PWM on a shared timer does not.
 ### Power
 
 An **SY8303AIC** synchronous buck regulator produces the servo rail from the
-battery. The worst case the rail must survive is 24 servos stalling at once, so
-the regulator is sized for that peak and not for the average draw.
+battery. The worst case the rail must survive is 24 servos stalling at once. The
+regulator is sized for that peak and not for the average draw.
 
 An **RQ3E075ATTB** P-channel MOSFET sits in the input path for reverse-polarity
 protection. Connecting the battery backwards does nothing instead of destroying

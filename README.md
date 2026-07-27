@@ -132,9 +132,10 @@ python shots.py          # regenerate the README screenshots
 pip install playwright && playwright install chromium
 ```
 
-`verify.py` boots each page, asserts that the rig produced eight legs, exercises
-the help modal, runs the gait, spawns a terrain block and walks the robot. It
-exits non-zero if the browser logged an error.
+`verify.py` boots each page and asserts that the rig produced eight legs. It
+then exercises the help modal, toggles the panels, runs the gait, spawns a
+terrain block and walks the robot. It exits non-zero if the browser logged an
+error.
 
 ---
 
