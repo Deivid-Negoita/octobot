@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createResolutionGovernor, createContactShadow } from './perf.js';
 import { Chain } from './chain.js';
 import { GaitEngine } from './gait.js';
 import { RigBinding } from './binding.js';
@@ -31,9 +32,10 @@ window.__THREE = THREE;
 
 function initScene() {
   const viewport = document.getElementById('viewport');
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(window.innerWidth, window.innerHeight);
+  // the governor owns the pixel ratio from here
+  App.govern = createResolutionGovernor(renderer);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.95;
   viewport.appendChild(renderer.domElement);
@@ -89,6 +91,11 @@ function initScene() {
   axes.position.y = 0.001;
   scene.add(axes);
 
+  // grounds the robot without a shadow-map pass over a 12 MB mesh
+  App.contactShadow = createContactShadow(THREE, { size: 3.2, opacity: 0.3 });
+  App.contactShadow.visible = false;
+  scene.add(App.contactShadow);
+
   // transform gizmo
   const tcontrols = new TransformControls(camera, renderer.domElement);
   tcontrols.size = 0.75;
@@ -101,10 +108,16 @@ function initScene() {
   tcontrols.addEventListener('objectChange', onGizmoChange);
   scene.add(tcontrols);
 
+  let resizeTimer = 0;
   window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    // dragging a window edge fires this continuously, and each call reallocates
+    // the drawing buffer
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }, 80);
   });
 
   Object.assign(App, { scene, camera, renderer, orbit, tcontrols });
@@ -797,6 +810,14 @@ function tick() {
   }
   App.ui?.updateTelemetry(dt);
 
+  // keep the contact shadow under the body
+  if (App.contactShadow?.visible && App.models[0]) {
+    const g = App.models[0].group;
+    App.contactShadow.position.x = g.position.x;
+    App.contactShadow.position.z = g.position.z;
+  }
+
+  App.govern?.(dt);
   App.renderer.render(App.scene, App.camera);
 }
 

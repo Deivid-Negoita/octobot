@@ -20,7 +20,7 @@ repository exists to solve that.
 | [`kinematics/`](kinematics/) | Browser workbench and locomotion sandbox. Three.js, no build step. |
 | [`hardware/`](hardware/) | KiCad 7 project for the 24-channel servo control board. |
 | [`mechanical/`](mechanical/) | STEP exports of the chassis and a single leg. |
-| [`docs/`](docs/) | [Hardware notes](docs/hardware.md) and [kinematics notes](docs/kinematics.md). |
+| [`docs/`](docs/) | [Hardware notes](docs/hardware.md), [kinematics notes](docs/kinematics.md) and the [bill of materials](docs/bom.md). |
 
 The embedded firmware lives in a separate repository and is not included here.
 
@@ -83,8 +83,14 @@ One board drives all 24 servos. An **ATmega32U4** talks over I²C to **two
 PCA9685** 16-channel PWM drivers, which gives 32 channels for the 24 servos and
 leaves headroom for sensors. An **SY8303** synchronous buck regulator supplies
 the servo rail from the battery, and a P-channel MOSFET on the input protects
-against reverse polarity. The board is a 4-layer design with 28 three-pin servo
-headers, an AVR-ISP header, a DIP switch and two tactile buttons.
+against reverse polarity.
+
+The 24 servo headers sit on two separate power rails of 12, so the inrush of one
+group of legs cannot brown out the other. An **HC-12** radio module plugs into a
+4-pin header on D8 and D9. Running the link on a software UART keeps the
+hardware USART free and lets the antenna sit away from the servo wiring. The
+board is a 4-layer design with 120 placements, an AVR-ISP header, a DIP switch
+and two tactile buttons.
 
 Building 24 servo channels from discrete drivers would have cost more and taken
 more board area than the two PCA9685s do.
@@ -95,7 +101,9 @@ more board area than the two PCA9685s do.
 > set. The schematic and PCB in `hardware/` are current. Re-export the gerbers,
 > BOM and placement file from KiCad before ordering anything.
 
-Read [`docs/hardware.md`](docs/hardware.md) for the full component breakdown.
+Read [`docs/hardware.md`](docs/hardware.md) for the full component breakdown and
+[`docs/bom.md`](docs/bom.md) for the parts list. The parts list is generated from
+the layout by `hardware/tools/gen_bom.py`, so it cannot drift from the board.
 
 ---
 

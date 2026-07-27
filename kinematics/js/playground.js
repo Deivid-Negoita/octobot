@@ -29,12 +29,15 @@
 // fold into the block just by rotating; (d) the walled detector is suppressed on a
 // pure turn (a lateral hip sweep over an edge is not a real climb), while walking
 // climbs and idle straddle-finishes still auto-climb. The look-ahead belly that
-// lifts the body on the approach to a step is kept (LOOK = 0.55).
+// lifts the body on the approach to a step is kept (LOOK = 0.55) and now fires in
+// ANY travel direction — forward, backward, or strafe — not just straight ahead.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { loadOctobot, LIMITS } from './octorig.js';
 import { createBoot } from './boot.js';
+import { applyRobotFinish } from './materials.js';
+import { createResolutionGovernor } from './perf.js';
 
 const $ = id => document.getElementById(id);
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -50,9 +53,10 @@ const notSat = leg => { const a = leg.angles; return Math.abs(a.yaw) < LIM_DEG_Y
 const DEBUG = new URLSearchParams(location.search).has('debug');
 
 // ---------------------------------------------------------------- scene
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
+// the governor owns the pixel ratio from here
+const govern = createResolutionGovernor(renderer);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 $('viewport').appendChild(renderer.domElement);
@@ -937,15 +941,19 @@ function updateGait(dt) {
     isFinite(g_bodyBlockTop) ? (g_bodyBlockTop - PLATE_BOTTOM_Y + 0.06) : -Infinity,
     bodyClearFloor(),   // tilt-aware + proximity: lift when a (tilted) plate corner nears / clips a block corner
   );
-  // LOOK-AHEAD BELLY (climb-onset clip fix). Walking forward into a *climbable*
-  // step, raise the body *before* the plate is actually over it, so the front legs'
-  // first swing meets the edge from bridging height instead of raking the face for
-  // a stride at ground height. Gated on pressing forward + a mountable ahead step,
-  // so idle-in-front-of-a-wall and unclimbable walls don't pre-crouch, and a pure
-  // turn (translating false) never triggers it.
-  if (translating && fwdIn > 0) {
+  // LOOK-AHEAD BELLY (climb-onset clip fix). Moving into a *climbable* step in ANY
+  // direction — forward, backward, or strafe — raise the body *before* the plate is
+  // actually over it, so the leading legs' first swing meets the edge from bridging
+  // height instead of raking the face for a stride at ground height. The look-ahead
+  // point is projected along the actual travel direction (body.vel), not just the
+  // heading, so backing or strafing into a step lifts exactly like walking forward.
+  // Gated on translating + a mountable ahead step, so idle-in-front-of-a-wall and
+  // unclimbable walls don't pre-crouch, and a pure turn (translating false) never
+  // triggers it.
+  if (translating && body.vel.lengthSq() > 1e-6) {
     const LOOK = 0.55;
-    const lx = body.pos.x + _fwd.x * LOOK, lz = body.pos.z + _fwd.z * LOOK;
+    const travelDir = _tv.copy(body.vel).normalize();
+    const lx = body.pos.x + travelDir.x * LOOK, lz = body.pos.z + travelDir.z * LOOK;
     const aheadTop = heightAtFootprintDense(lx, lz, body.quat);
     if (aheadTop - supportY <= 0.55) {                 // 0.55 ≈ climbable step ceiling
       const aheadClear = aheadTop - PLATE_BOTTOM_Y + 0.06;
@@ -1485,6 +1493,7 @@ function tick() {
     catch (err) { if (!_telErr) { _telErr = true; console.error('[telemetry] throwing — HUD frozen, render continues:', err); } }
   }
   orbit.update();
+  govern(dt);
   renderer.render(scene, povMode ? povCam : camera);
 }
 
@@ -1499,6 +1508,7 @@ function tick() {
     return;
   }
   boot.stage('BUILDING RIG');
+  applyRobotFinish(rig.root);   // the rig only — the ground shadow keeps its own material
   if (DEBUG) {
     console.log('[octorig] joint limits, deg:',
       LIM_DEG_Y.toFixed(1), LIM_DEG_S.toFixed(1), LIM_DEG_K.toFixed(1));

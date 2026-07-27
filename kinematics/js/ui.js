@@ -1,6 +1,7 @@
 // ui.js — panels, lists, telemetry, io
 import { bendAngleAt } from './solver.js';
 import { loadFromURL } from './loader.js';
+import { applyRobotFinish } from './materials.js';
 import { createBoot } from './boot.js';
 import { GAITS } from './gait.js';
 import {
@@ -341,6 +342,9 @@ export function initUI(App) {
     boot.stage('BUILDING RIG');
     App.scene.add(model.group);
     App.models.push(model);
+    // Recolour before rigging. The auto-rig reparents meshes out of model.group
+    // into per-bone groups, so a traverse after that point misses every leg.
+    applyRobotFinish(model.group);
     let rig;
     try {
       rig = maybeRigOctobot(model);
@@ -348,6 +352,7 @@ export function initUI(App) {
       boot.fail('maybeRigOctobot', err);
       return;
     }
+    if (App.contactShadow) App.contactShadow.visible = true;
     frameModel(model.group);
     boot.done();
     if (rig) {
