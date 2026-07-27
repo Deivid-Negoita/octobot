@@ -1,0 +1,93 @@
+/* ═══════════════════════════════════════════════════════════════
+   playground.css — driving simulator only. Shared chrome is in console.css.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root { --bar-h: 46px; --foot-h: 38px; }
+
+#topbar { justify-content: space-between; }
+
+/* ── side panels ─────────────────────────────────────────── */
+
+#left-panel {
+  position: fixed; top: calc(var(--bar-h) + 10px); left: 12px;
+  width: 268px; z-index: 15;
+  max-height: calc(100vh - var(--bar-h) - var(--foot-h) - 22px);
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+#right-panel {
+  position: fixed; top: calc(var(--bar-h) + 10px); right: 12px;
+  width: 252px; z-index: 15;
+}
+#left-panel::-webkit-scrollbar { width: 5px; }
+#left-panel::-webkit-scrollbar-thumb { background: var(--line); }
+
+#left-panel, #right-panel { transition: transform .22s cubic-bezier(.2,.7,.3,1), opacity .22s; }
+#left-panel.collapsed  { transform: translateX(calc(-100% - 16px)); opacity: 0; pointer-events: none; }
+#right-panel.collapsed { transform: translateX(calc(100% + 16px));  opacity: 0; pointer-events: none; }
+
+/* the playground's labels are shorter than the workbench's */
+.row > label { width: 52px; }
+.row .val { width: 36px; }
+
+.keys { font-size: 10px; line-height: 1.9; color: var(--txt-dim); }
+.keys div { display: flex; align-items: baseline; gap: 7px; }
+.keys b { color: var(--cyan); font-family: var(--disp); letter-spacing: 1px; flex-shrink: 0; }
+
+/* ── servo telemetry table ───────────────────────────────── */
+
+#servo-table, #contact-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+#servo-table th {
+  font-family: var(--disp); font-weight: 600; font-size: 8.5px; letter-spacing: 1px;
+  color: var(--txt-dim); text-align: right; padding: 2px 4px 6px;
+}
+#servo-table td, #contact-table td { text-align: right; padding: 2.5px 4px; color: var(--cyan); }
+#servo-table td.lg, #contact-table td.lg {
+  text-align: left; color: var(--amber);
+  font-family: var(--disp); font-weight: 600; font-size: 9px; letter-spacing: 1px;
+}
+#servo-table tbody tr, #contact-table tbody tr { border-top: 1px solid var(--line-soft); }
+
+/* the contact panel is injected under the servo table by playground.js */
+.contact-panel { margin-top: 10px; }
+#contact-table td:last-child { color: var(--green); font-weight: 600; }
+
+/* ── status bar ──────────────────────────────────────────── */
+
+#statusbar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: var(--foot-h); z-index: 20;
+  display: flex; align-items: stretch;
+  background: linear-gradient(0deg, rgba(13,15,19,0.97), rgba(13,15,19,0.9));
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#statusbar::-webkit-scrollbar { height: 0; }
+#statusbar .t-cell { min-width: 90px; }
+#statusbar .t-cell span { color: var(--green); }
+
+#btn-spawn { transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+#btn-spawn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(242,163,60,.18); }
+#btn-spawn:active { transform: translateY(0); }
+
+/* ── narrow viewports ────────────────────────────────────── */
+
+/* Below this the two panels would meet over the robot. They stack instead of
+   one being dropped, so the servo telemetry stays reachable on a laptop. */
+@media (max-width: 1000px) {
+  #right-panel {
+    top: auto;
+    bottom: calc(var(--foot-h) + 10px);
+    width: 216px;
+  }
+  #right-panel .panel-body { max-height: 42vh; overflow-y: auto; }
+}
+@media (max-width: 720px) {
+  #left-panel { width: min(268px, 88vw); left: 6px; }
+  #right-panel { right: 6px; width: min(216px, 46vw); }
+  .brand h1 { font-size: 14px; letter-spacing: 1px; }
+  #topbar { gap: 10px; padding: 0 10px; }
+}

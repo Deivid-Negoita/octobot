@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Octobot — IK Workbench</title>
+<meta name="description" content="Browser workbench for an eight-legged robot: the CAD model rigs itself on load, then you constrain the servo joints, solve inverse kinematics against a draggable target, and run a gait.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0d10">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/console.css">
+<link rel="stylesheet" href="css/workbench.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="viewport"></div>
+<div id="scanlines"></div>
+
+<!-- ══════════ BOOT ══════════ -->
+<div id="boot" role="status" aria-live="polite">
+  <div class="boot-card">
+    <div class="boot-mark" aria-hidden="true">◢◤</div>
+    <h1>OCTOBOT<span>//</span>IK WORKBENCH</h1>
+    <p class="boot-sub">ARTICULATION &amp; SIMULATION</p>
+    <div class="boot-bar indeterminate" id="boot-bar"><i></i></div>
+    <div class="boot-stat">
+      <span id="boot-stage">FETCHING MESH</span>
+      <span id="boot-pct"></span>
+    </div>
+    <p class="boot-note">The chassis mesh is about 12 MB. It loads once, then rigs itself into eight servo-driven legs.</p>
+  </div>
+</div>
+
+<!-- ══════════ TOP BAR ══════════ -->
+<header id="topbar">
+  <button id="btn-panels" class="btn ghost" aria-expanded="true" aria-controls="sidebar" title="show / hide the side panels">☰ <kbd>P</kbd></button>
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">◢◤</span>
+    <h1>OCTOBOT<span>//</span>IK WORKBENCH</h1>
+    <span class="brand-sub">ARTICULATION &amp; SIMULATION</span>
+  </div>
+  <div class="topbar-group" role="group" aria-label="interaction mode">
+    <button id="btn-mode-build" class="btn" aria-pressed="false" title="select and inspect joints">⬡ JOINTS <kbd>1</kbd></button>
+    <button id="btn-mode-solve" class="btn" aria-pressed="true" title="drag the target, solve IK">◎ SOLVE <kbd>2</kbd></button>
+  </div>
+  <div class="topbar-group right">
+    <a class="btn ghost" href="playground.html" title="drive the octobot around a terrain course">⇄ PLAYGROUND</a>
+    <button id="btn-export" class="btn ghost" title="download rig + servo angles as JSON">⭳ EXPORT</button>
+    <button id="btn-help" class="btn ghost" aria-haspopup="dialog" title="how this works">? <kbd>H</kbd></button>
+  </div>
+</header>
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside id="sidebar" aria-label="rig controls">
+
+  <section class="panel">
+    <h2>▸ LEGS</h2>
+    <div class="panel-body">
+      <div id="chain-list"></div>
+      <div class="subhead">JOINTS <span class="dim">pos&nbsp;/&nbsp;angle</span></div>
+      <div id="joint-list"></div>
+      <div id="joint-inspector" class="inspector disabled">
+        <div class="row">
+          <label for="sel-joint-type">JOINT TYPE</label>
+          <select id="sel-joint-type">
+            <option value="ball">BALL · CONE</option>
+            <option value="h180">HINGE · 180°</option>
+            <option value="h360">HINGE · 360°</option>
+            <option value="hcustom">HINGE · CUSTOM</option>
+          </select>
+        </div>
+        <div class="row" id="row-bend">
+          <label for="inp-bend">BEND LIMIT</label>
+          <input type="range" id="inp-bend" min="10" max="180" step="5" value="180">
+          <span class="val" id="val-bend">FREE</span>
+        </div>
+        <div class="row" id="row-axis">
+          <label id="lbl-axis">HINGE AXIS</label>
+          <div class="seg" id="seg-axis" role="group" aria-labelledby="lbl-axis">
+            <button data-axis="x" aria-pressed="false">X</button><button data-axis="y" aria-pressed="false">Y</button><button data-axis="z" aria-pressed="false">Z</button>
+          </div>
+        </div>
+        <div class="row" id="row-range">
+          <label for="inp-range">SWEEP</label>
+          <input type="range" id="inp-range" min="10" max="360" step="5" value="180">
+          <span class="val" id="val-range">180°</span>
+        </div>
+        <div class="hint" id="inspector-hint">FABRIK only · limits bend vs previous segment</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>▸ SOLVER</h2>
+    <div class="panel-body">
+      <div class="row">
+        <label for="sel-solver">ALGORITHM</label>
+        <select id="sel-solver">
+          <option value="fabrik">FABRIK</option>
+          <option value="ccd">CCD</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="inp-iterations">ITERATIONS</label>
+        <input type="range" id="inp-iterations" min="1" max="64" step="1" value="16">
+        <span class="val" id="val-iterations">16</span>
+      </div>
+      <div class="row">
+        <label for="inp-tolerance">TOLERANCE</label>
+        <input type="range" id="inp-tolerance" min="-4" max="-1" step="0.1" value="-2.7" aria-label="solver tolerance, logarithmic">
+        <span class="val" id="val-tolerance">2e-3</span>
+      </div>
+      <div class="subhead">COLLISION GUARD</div>
+      <div class="row checks">
+        <label class="chk"><input type="checkbox" id="chk-col-models" checked> MODELS</label>
+        <label class="chk"><input type="checkbox" id="chk-col-self" checked> SELF</label>
+        <label class="chk"><input type="checkbox" id="chk-col-floor" checked> FLOOR</label>
+      </div>
+      <div class="hint">A pose that would hit something is rejected. The chain freezes at its last safe pose and STATUS turns red.</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>▸ GAIT</h2>
+    <div class="panel-body">
+      <div class="row">
+        <label for="sel-gait">PATTERN</label>
+        <select id="sel-gait"></select>
+      </div>
+      <div class="row">
+        <label for="sel-heading">HEADING</label>
+        <select id="sel-heading">
+          <option value="0,0,-1" selected>FORWARD (−Z)</option>
+          <option value="0,0,1">BACKWARD (+Z)</option>
+          <option value="-1,0,0">LEFT (−X)</option>
+          <option value="1,0,0">RIGHT (+X)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="inp-cycle">CYCLE</label>
+        <input type="range" id="inp-cycle" min="0.6" max="4" step="0.1" value="2">
+        <span class="val" id="val-cycle">2.0s</span>
+      </div>
+      <div class="row">
+        <label for="inp-stride">STRIDE</label>
+        <input type="range" id="inp-stride" min="0.1" max="1.2" step="0.05" value="0.45">
+        <span class="val" id="val-stride">0.45</span>
+      </div>
+      <div class="row">
+        <label for="inp-lift">LIFT</label>
+        <input type="range" id="inp-lift" min="0.05" max="0.6" step="0.01" value="0.2">
+        <span class="val" id="val-lift">0.20</span>
+      </div>
+      <div class="btn-row">
+        <button id="btn-walk" class="btn accent grow">▶ WALK <kbd>Space</kbd></button>
+        <button id="btn-walk-stop" class="btn" aria-label="stop walking and restore the pose" title="stop and restore the pose">■</button>
+      </div>
+      <div class="row checks">
+        <label class="chk"><input type="checkbox" id="chk-show-rig"> SHOW RIG BONES</label>
+      </div>
+      <div class="hint">WALK drives the body and all eight legs. STOP restores the starting pose.</div>
+    </div>
+  </section>
+
+</aside>
+
+<!-- ══════════ TELEMETRY ══════════ -->
+<footer id="telemetry" aria-label="telemetry">
+  <div class="t-cell"><label>MODE</label><span id="t-mode">SOLVE</span></div>
+  <div class="t-cell"><label>STATUS</label><span id="t-status" class="ok">OK</span></div>
+  <div class="t-cell"><label>CHAIN</label><span id="t-chain">—</span></div>
+  <div class="t-cell wide"><label>END EFFECTOR</label><span id="t-ee" class="mono">—</span></div>
+  <div class="t-cell wide"><label>TARGET</label><span id="t-target" class="mono">—</span></div>
+  <div class="t-cell"><label>ERROR</label><span id="t-err" class="mono">—</span></div>
+  <div class="t-cell"><label>ITER</label><span id="t-iter" class="mono">—</span></div>
+  <div class="t-cell"><label>SOLVE</label><span id="t-ms" class="mono">—</span></div>
+  <div class="t-cell"><label>FPS</label><span id="t-fps" class="mono">—</span></div>
+</footer>
+
+<!-- ══════════ OVERLAYS ══════════ -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="help-card">
+    <h3 id="help-title">◢◤ OCTOBOT IK WORKBENCH — OPERATION</h3>
+    <table>
+      <tr><td class="k">STARTUP</td><td>The octobot loads and rigs itself: eight legs (LEG-1…8), each a hip-yaw → shoulder-pitch → knee-pitch chain on the real servo axes, with every mesh bound to its link.</td></tr>
+      <tr><td class="k">JOINTS <kbd>1</kbd></td><td>Click a leg in the list or a joint in the scene to select it. The inspector shows that servo's type, hinge axis and sweep limits. The JOINTS list streams live position and angle for every joint.</td></tr>
+      <tr><td class="k">SOLVE <kbd>2</kbd></td><td>Drag the cyan target. That leg solves toward it in real time and the servo angles update live.</td></tr>
+      <tr><td class="k">GAIT <kbd>Space</kbd></td><td>Pick a pattern and heading, then press WALK to drive all eight legs. STOP restores the pose. SHOW RIG BONES reveals the skeleton inside the mesh.</td></tr>
+      <tr><td class="k">COLLISION</td><td>Poses that would drive a bone through the chassis, another bone, or the floor are rejected. The leg freezes at its last safe pose, the offending bones flash red, and STATUS reads COLLISION.</td></tr>
+      <tr><td class="k">EXPORT</td><td>Downloads the rig and the current servo angles as JSON for the real controller.</td></tr>
+      <tr><td class="k">CAMERA</td><td>Drag to orbit, wheel to zoom, right-drag to pan. <kbd>F</kbd> re-frames the robot, <kbd>P</kbd> hides the panels for a clear view.</td></tr>
+    </table>
+    <div class="help-foot">
+      <span class="hint">Press <kbd>Esc</kbd> to close.</span>
+      <button id="help-close" class="btn accent">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# ── KiCad ──────────────────────────────────────────────────────
+# Automatic backup archives. KiCad regenerates these on every save and they
+# reached 19 MB in this project.
+hardware/board-backups/
+
+# Footprint index cache (3.5 MB) and per-user layout state.
+fp-info-cache
+*.kicad_prl
+
+# Fabrication Toolkit plugin cache.
+project.db
+
+# KiCad scratch and lock files.
+*-backups/
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.bak
+*~
+_autosave-*
+fp-lib-table-*
+*.lck
+
+# ── large CAD exports ──────────────────────────────────────────
+# STEP files are text and compress to about 15% of their size, so the zips are
+# committed and the loose exports are not. Unzip before opening in CAD.
+mechanical/*.step
+hardware/*.step
+!*.step.zip
+
+# ── Python ─────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ── tooling output ─────────────────────────────────────────────
+kinematics/tools/snapshots/
+
+# ── editors and OS ─────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Octobot — Playground</title>
+<meta name="description" content="Drive the eight-legged octobot with WASD over spawnable terrain blocks. Closed-form inverse kinematics, a tetrapod gait, and live servo angles for all 24 joints.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0d10">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/console.css">
+<link rel="stylesheet" href="css/playground.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="viewport"></div>
+<div id="scanlines"></div>
+
+<!-- ══════════ BOOT ══════════ -->
+<div id="boot" role="status" aria-live="polite">
+  <div class="boot-card">
+    <div class="boot-mark" aria-hidden="true">◢◤</div>
+    <h1>OCTOBOT<span>//</span>PLAYGROUND</h1>
+    <p class="boot-sub">LOCOMOTION SANDBOX</p>
+    <div class="boot-bar indeterminate" id="boot-bar"><i></i></div>
+    <div class="boot-stat">
+      <span id="boot-stage">FETCHING MESH</span>
+      <span id="boot-pct"></span>
+    </div>
+    <p class="boot-note">The chassis mesh is about 12 MB. After it loads, the hinge signs are calibrated by probing each servo, then the stance is measured against the floor.</p>
+  </div>
+</div>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">◢◤</span>
+    <h1>OCTOBOT<span>//</span>PLAYGROUND</h1>
+  </div>
+  <div class="topbar-group right">
+    <button id="btn-panels" class="btn ghost" aria-expanded="true" aria-controls="left-panel right-panel" title="show / hide the panels">☰ <kbd>P</kbd></button>
+    <a class="btn ghost" href="index.html" title="joint inspector and IK solver">⇄ WORKBENCH</a>
+  </div>
+</header>
+
+<!-- ══════════ BLOCKS PANEL ══════════ -->
+<aside id="left-panel" aria-label="terrain and controls">
+  <section class="panel">
+    <h2>▸ TERRAIN BLOCKS</h2>
+    <div class="panel-body">
+      <div class="row">
+        <label for="inp-bw">WIDTH</label>
+        <input type="range" id="inp-bw" min="0.2" max="3" step="0.05" value="1.2">
+        <span class="val" id="val-bw">1.20</span>
+      </div>
+      <div class="row">
+        <label for="inp-bh">HEIGHT</label>
+        <input type="range" id="inp-bh" min="0.02" max="0.4" step="0.01" value="0.12">
+        <span class="val" id="val-bh">0.12</span>
+      </div>
+      <div class="row">
+        <label for="inp-bl">LENGTH</label>
+        <input type="range" id="inp-bl" min="0.2" max="3" step="0.05" value="1.2">
+        <span class="val" id="val-bl">1.20</span>
+      </div>
+      <div class="btn-row">
+        <button id="btn-spawn" class="btn accent grow">+ SPAWN BLOCK</button>
+        <button id="btn-del-block" class="btn danger" disabled aria-label="delete the selected block" title="delete the selected block">✕</button>
+      </div>
+      <div class="hint">Blocks spawn in front of the robot. Click one to select it, drag to move it, and use the sliders to resize the selection. Walk onto a block and the feet follow its surface.</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>▸ CONTROLS</h2>
+    <div class="panel-body keys">
+      <div><b>W A S D</b> <span>walk, relative to heading</span></div>
+      <div><b>Q / E</b> <span>lower / raise the body</span></div>
+      <div><b>R</b> <span>toggle A/D: strafe ↔ turn</span></div>
+      <div><b>↑ ↓ ← →</b> <span>lean the body</span></div>
+      <div><b>Y</b> <span>toggle the octobot POV camera</span></div>
+      <div><b>P</b> <span>show / hide these panels</span></div>
+      <div><b>drag</b> <span>orbit · <b>wheel</b> zoom</span></div>
+    </div>
+  </section>
+</aside>
+
+<!-- ══════════ SERVO TELEMETRY ══════════ -->
+<aside id="right-panel" aria-label="servo telemetry">
+  <section class="panel">
+    <h2>▸ SERVO TELEMETRY</h2>
+    <div class="panel-body">
+      <table id="servo-table">
+        <caption class="hidden">Live servo angles per leg</caption>
+        <thead><tr><th scope="col"><span class="hidden">leg</span></th><th scope="col">J0 YAW</th><th scope="col">J1 SHLD</th><th scope="col">J2 KNEE</th></tr></thead>
+        <tbody id="servo-rows"></tbody>
+      </table>
+    </div>
+  </section>
+</aside>
+
+<footer id="statusbar" aria-label="status">
+  <div class="t-cell"><label>BODY</label><span id="t-body" class="mono">—</span></div>
+  <div class="t-cell"><label>HEIGHT</label><span id="t-height" class="mono">+0.00</span></div>
+  <div class="t-cell"><label>MODE</label><span id="t-mode" class="mono">A/D: STRAFE</span></div>
+  <div class="t-cell"><label>CAM</label><span id="t-cam" class="mono">ORBIT</span></div>
+  <div class="t-cell"><label>BLOCKS</label><span id="t-blocks" class="mono">0</span></div>
+</footer>
+
+<script type="module" src="js/playground.js"></script>
+</body>
+</html>
