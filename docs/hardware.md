@@ -1,119 +1,104 @@
-# The control board
+# Controller board
 
-One 4-layer board drives all 24 servos of the octobot. The KiCad project is in
-[`hardware/`](../hardware/).
+A 124 × 23 mm four-layer board that drives 24 servos from a single MCU. It sits
+along the spine of the chassis with twelve servo headers down each long edge, so
+each leg's cable run is short.
 
-| File | What it is |
+Everything below is read from `hardware/octobot-controller.kicad_sch` and
+`hardware/octobot-controller.kicad_pcb`. The files under
+`hardware/fabrication/` are exported from that same layout, and
+`python hardware/tools/gen_bom.py --check` compares the two designator by
+designator.
+
+| | |
 |---|---|
-| `octobot-controller.kicad_sch` | Schematic. Flat, single sheet. |
-| `octobot-controller.kicad_pcb` | Layout. 120 placements across 4 copper layers. |
-| `octobot-controller.step.zip` | 3D export of the assembled board. |
-| `fabrication/` | Gerbers, BOM and placement file from 2023. **Stale — see below.** |
-
-The parts list is in [`bom.md`](bom.md). It is generated from the layout rather
-than typed out, so it cannot drift from the board.
-
----
-
-## Architecture
-
-The servo count drives the whole design. Eight legs with three joints each need
-24 independent PWM channels. An ATmega32U4 has nowhere near that many hardware
-timers, so the MCU generates no servo pulses at all. It sends I²C commands to
-two dedicated PWM controllers, which hold their outputs between updates.
-
-```
- battery ─▶ Q1 P-FET ─▶ SY8303 buck ─┬─▶ VCC_SERVOBLOCK_1 ─▶ J2–J14   12 servos
-            reverse-polarity         ├─▶ VCC_SERVOBLOCK_2 ─▶ J17–J28  12 servos
-            protection               │
-                                     └─▶ ATmega32U4 ─I²C─┬─▶ PCA9685 U1 ─▶ 12 ch
-                                              │          └─▶ PCA9685 U2 ─▶ 12 ch
-                                              └── D8 / D9 ─▶ J15 ─▶ HC-12 radio
-```
-
-### Microcontroller
-
-**ATmega32U4-M** in a QFN-44 package, clocked by a 16 MHz crystal (Y1). The part
-has native USB, so the board enumerates over the Molex 47346-0001 micro-USB
-receptacle (J1) without a separate USB-to-serial bridge. An AVR-ISP header (U4)
-is on the board for flashing a bootloader or recovering a bricked chip.
-
-### Servo drive
-
-**Two PCA9685PW** 16-channel, 12-bit PWM controllers on I²C (U1 and U2). Each
-drives 12 servo channels in this design, which totals 24 and leaves 8 spare
-channels. The schematic names these nets `Servo_Multiplexer1_1…12` and
-`Servo_Multiplexer2_1…12`.
-
-The 12-bit resolution matters for a walker. At a 50 Hz servo frame it resolves
-the pulse width finely enough that a leg holds a commanded angle without visible
-stepping. A software PWM on a shared timer does not.
-
-The 24 servo headers are split across two power rails, `VCC_SERVOBLOCK_1` and
-`VCC_SERVOBLOCK_2`, with 12 headers on each. Splitting the rails keeps the
-inrush of one group of legs from browning out the other. Each rail has its own
-power-injection header, J29 and J30. Heavy servo current can therefore be fed
-straight to the rail instead of through the regulator trace.
-
-### Radio
-
-**J15** is a 4-pin header carrying 5V, GND, D8 and D9. An **HC-12** module plugs
-in here. D8 and D9 are the serial pair, so the link runs on a software UART and
-leaves the hardware USART free. The module is not populated on the board, which
-means an antenna can be sited away from the servo wiring.
-
-### Power
-
-An **SY8303AIC** synchronous buck regulator produces the servo rail from the
-battery. The worst case the rail must survive is 24 servos stalling at once. The
-regulator is sized for that peak and not for the average draw.
-
-An **RQ3E075ATTB** P-channel MOSFET (Q1) sits in the input path for
-reverse-polarity protection. Connecting the battery backwards does nothing
-instead of destroying the board.
-
-There is no separate 3.3 V regulator. The whole board runs at 5 V.
-
-### Interface
-
-- 24 × 3-pin servo headers, 12 per power rail
-- 2 × 3-pin power-injection headers, one per rail (J29, J30)
-- 2 × 3-pin sensor headers on A0 and A1 (J32, J33)
-- DIP switch `DS04-254-2-03BK-SMT` (S3) for boot-time configuration
-- Two tactile buttons `TL3365AF180QG` (S1, S2)
-- Three status LEDs (D1, D3, D4)
+| Outline | 124 × 23 mm, 1.6 mm, four copper layers |
+| MCU | ATmega32U4 (QFN-44), 16 MHz crystal, native USB |
+| PWM | 2 × NXP PCA9685, 12-bit, I2C |
+| Servo channels | 24, on two independently supplied power rails |
+| Input | 2-pin header, reverse-polarity protected, buck to 5 V |
+| Radio | HC-12 module on a 4-pin header |
+| Routing | 851 track segments, 97 vias, 3 copper zones |
 
 ---
 
-## Fabrication files are out of date
+## Power
 
-`hardware/fabrication/` was exported on **2023-06-28**. The schematic and layout
-were last changed on **2026-07-26**. The exports do not describe the current
-board.
+Input arrives on `J9`. `Q1`, a ROHM RQ3E075ATTB P-channel MOSFET, passes it to
+the `VIN` rail. `R15` (100 K) pulls the gate down, and `D5`, a Nexperia
+HPZR-C10X 10 V regulator diode, clamps it. That pair blocks reverse polarity and
+keeps the gate inside its rating on a higher-voltage pack.
 
-The two revisions are far apart. The 2023 export lists an nRF24L01 radio, an SMA
-antenna connector, two TLE9201SG motor drivers, a REG1117-3.3 regulator and a
-USB Mini-B socket. None of those parts are on the current board. The PCA9685
-servo drivers that the current board is built around do not appear in that
-export at all.
+`IC1`, a Silergy SY8303 synchronous buck, steps `VIN` down to the logic rail
+through `L1` (4.7 µH). The feedback divider `R11`/`R12` (110 K / 15 K) against
+the part's 0.6 V reference sets the output to 5.0 V. `R13` sets the switching
+frequency, `R14` ties `EN` high off `VIN`, and `C20` is the bootstrap.
 
-Re-export before ordering:
+The 5 V rail supplies the MCU, both PWM expanders, the radio header, the ISP
+header, the two analog sensor headers, and the `J16`/`J34` taps.
 
-1. Open `octobot-controller.kicad_pcb` in KiCad.
-2. **File → Fabrication Outputs → Gerbers** into `fabrication/gerbers/`.
-3. **File → Fabrication Outputs → Drill Files** into the same folder.
-4. **Tools → Generate BOM** and **File → Fabrication Outputs → Component Placement**.
+### Servo rails are separate
 
-The old exports stay in the repository because they record what was actually
-manufactured in 2023. They are history, not a build target.
+`VCC_SERVOBLOCK_1` and `VCC_SERVOBLOCK_2` never touch the 5 V logic rail. Each
+is fed only through pin 2 of its rail header, `J29` for rail 1 and `J30` for
+rail 2. Each also carries a Würth 875075161013 aluminium electrolytic (`C6`,
+`C9`) for the stall-current transients that twelve servos produce.
 
----
+Those headers are wired GND / rail / `VIN`, which gives two options per rail:
 
-## Opening the project
+- Jumper pin 2 to pin 3 to run that block of servos straight off the input pack.
+- Leave the jumper off and feed pin 2 from a separate BEC.
 
-Install KiCad 7 or newer, then open `hardware/octobot-controller.kicad_pro`.
-The project has no external symbol or footprint libraries, so nothing else needs
-installing.
+Two independently fed rails keep one leg group's current spikes out of the
+other, and keep both out of the logic supply.
 
-`hardware/board-backups/` holds KiCad's automatic backup archives and is
-excluded from git.
+## Servo channels
+
+24 three-pin headers, each wired GND / rail / signal:
+
+| Rail | Headers | PWM device |
+|---|---|---|
+| `VCC_SERVOBLOCK_1` | `J2`–`J8`, `J10`–`J14` | `U1` at 0x40 |
+| `VCC_SERVOBLOCK_2` | `J17`–`J28` | `U2` at 0x41 |
+
+Every signal line runs through a 220 Ω series resistor (`R31`–`R54`) between the
+PCA9685 output and the header pin. The resistor damps the reflections a long,
+unshielded servo lead produces. It also limits the current into the servo's
+input on a fault.
+
+`U1` takes the base address with `A0`–`A5` pulled to ground through 10 K. `U2`
+ties `A0` to 5 V for 0x41. Each device drives channels 0 to 11, so channels 12 to
+15 are left unconnected — 8 spare channels for a future revision. `OE` on both is
+pulled low through 10 K so outputs are enabled at power-up.
+
+## Interfaces
+
+| Header | Pins | Purpose |
+|---|---|---|
+| `J1` | Molex 47346-0001 | USB micro-B. Programming, and 5 V in when bench-powered. |
+| `J15` | 5 V, GND, `D8`, `D9` | HC-12 radio module. `D8`/`D9` carry the serial pair. |
+| `J31` | `D2`, `D3` | I2C breakout, the same bus the PWM expanders sit on. |
+| `J32`, `J33` | GND, 5 V, `A0` / `A1` | Analog sensor headers. |
+| `J16`, `J34` | GND, 5 V | 5 V taps. |
+| `U4` | 6-pin AVR ISP | `RESET`, `D14`/MISO, `D15`/SCK, `D16`/MOSI. |
+
+The MCU can be programmed over USB through the bootloader or over ISP at `U4`.
+`S3`, a three-position DIP switch, shares `D14`/`D15`/`D16` with the ISP header,
+so open it before programming through `U4`.
+
+I2C runs on `D2` (SDA) and `D3` (SCL) with 10 K pull-ups to 5 V.
+
+## Controls and indicators
+
+| Part | Function |
+|---|---|
+| `S1` | Reset. Tactile, on `RESET` with a 10 K pull-up (`R4`). |
+| `S2` | User button on `D12`, 10 K pull-down (`R8`). |
+| `S3` | 3-position DIP switch on `D14`/`D15`/`D16`. |
+| `D1` | Power. Straight off 5 V through `R7`. |
+| `D3`, `D4` | Serial activity, driven from `D17` and `PD5`. |
+
+## Bill of materials
+
+[bom.md](bom.md) — generated from the project files, 120 placements over 33
+lines. Regenerate with `python hardware/tools/gen_bom.py --write`.

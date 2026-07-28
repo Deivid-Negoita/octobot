@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Octobot — Playground</title>
+<title>Octobot — Locomotion Playground</title>
 <meta name="description" content="Drive the eight-legged octobot with WASD over spawnable terrain blocks. Closed-form inverse kinematics, a tetrapod gait, and live servo angles for all 24 joints.">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0b0d10">
+<meta name="theme-color" content="#0d0f12">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/console.css">
 <link rel="stylesheet" href="css/playground.css">
 <script type="importmap">
@@ -25,96 +25,122 @@
 <body>
 
 <div id="viewport"></div>
-<div id="scanlines"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="ico-mark"><circle cx="8" cy="8" r="3.1"/><path d="M8 4.9V1.4M8 11.1v3.5M4.9 8H1.4M11.1 8h3.5M5.8 5.8 3.3 3.3M10.2 5.8l2.5-2.5M5.8 10.2l-2.5 2.5M10.2 10.2l2.5 2.5"/></g>
+    <g id="ico-panels"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M6.2 3v10"/></g>
+    <g id="ico-arrow-back"><path d="M13 8H3M6.5 4.5 3 8l3.5 3.5"/></g>
+    <g id="ico-plus"><path d="M8 3.5v9M3.5 8h9"/></g>
+    <g id="ico-trash"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8h5.8l.6-8"/></g>
+  </defs>
+</svg>
 
 <!-- ══════════ BOOT ══════════ -->
 <div id="boot" role="status" aria-live="polite">
   <div class="boot-card">
-    <div class="boot-mark" aria-hidden="true">◢◤</div>
-    <h1>OCTOBOT<span>//</span>PLAYGROUND</h1>
-    <p class="boot-sub">LOCOMOTION SANDBOX</p>
+    <svg class="boot-mark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><use href="#ico-mark"/></svg>
+    <h1>Octobot Playground</h1>
+    <p class="boot-sub">Locomotion sandbox</p>
     <div class="boot-bar indeterminate" id="boot-bar"><i></i></div>
     <div class="boot-stat">
-      <span id="boot-stage">FETCHING MESH</span>
+      <span id="boot-stage">Fetching mesh</span>
       <span id="boot-pct"></span>
     </div>
-    <p class="boot-note">The chassis mesh is about 12 MB. After it loads, the hinge signs are calibrated by probing each servo, then the stance is measured against the floor.</p>
+    <p class="boot-note">The chassis mesh is about 12 MB. Once it loads, each servo is probed to calibrate its hinge sign, then the stance is measured against the floor.</p>
   </div>
 </div>
 
 <header id="topbar">
   <div class="brand">
-    <span class="brand-mark" aria-hidden="true">◢◤</span>
-    <h1>OCTOBOT<span>//</span>PLAYGROUND</h1>
+    <svg class="brand-mark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><use href="#ico-mark"/></svg>
+    <h1>Octobot Playground</h1>
+    <span class="brand-sub">Locomotion sandbox</span>
   </div>
   <div class="topbar-group right">
-    <button id="btn-panels" class="btn ghost" aria-expanded="true" aria-controls="left-panel right-panel" title="show / hide the panels">☰ <kbd>P</kbd></button>
-    <a class="btn ghost" href="index.html" title="joint inspector and IK solver">⇄ WORKBENCH</a>
+    <button id="btn-panels" class="btn ghost icon" aria-expanded="true" aria-controls="left-panel right-panel" title="Show or hide the panels (P)">
+      <svg class="i" viewBox="0 0 16 16"><use href="#ico-panels"/></svg>
+    </button>
+    <a class="btn ghost" href="index.html" title="Joint inspector and IK solver">
+      <svg class="i" viewBox="0 0 16 16"><use href="#ico-arrow-back"/></svg> Workbench
+    </a>
   </div>
 </header>
 
-<!-- ══════════ BLOCKS PANEL ══════════ -->
-<aside id="left-panel" aria-label="terrain and controls">
+<!-- ══════════ TERRAIN AND KEYS ══════════ -->
+<aside id="left-panel" class="scroll" aria-label="Terrain and controls">
   <section class="panel">
-    <h2>▸ TERRAIN BLOCKS</h2>
+    <h2>Terrain</h2>
     <div class="panel-body">
       <div class="row">
-        <label for="inp-bw">WIDTH</label>
+        <label for="inp-bw">Width</label>
         <input type="range" id="inp-bw" min="0.2" max="3" step="0.05" value="1.2">
         <span class="val" id="val-bw">1.20</span>
       </div>
       <div class="row">
-        <label for="inp-bh">HEIGHT</label>
+        <label for="inp-bh">Height</label>
         <input type="range" id="inp-bh" min="0.02" max="0.4" step="0.01" value="0.12">
         <span class="val" id="val-bh">0.12</span>
       </div>
       <div class="row">
-        <label for="inp-bl">LENGTH</label>
+        <label for="inp-bl">Length</label>
         <input type="range" id="inp-bl" min="0.2" max="3" step="0.05" value="1.2">
         <span class="val" id="val-bl">1.20</span>
       </div>
       <div class="btn-row">
-        <button id="btn-spawn" class="btn accent grow">+ SPAWN BLOCK</button>
-        <button id="btn-del-block" class="btn danger" disabled aria-label="delete the selected block" title="delete the selected block">✕</button>
+        <button id="btn-spawn" class="btn accent grow">
+          <svg class="i" viewBox="0 0 16 16"><use href="#ico-plus"/></svg> Spawn block
+        </button>
+        <button id="btn-del-block" class="btn danger icon" disabled aria-label="Delete the selected block" title="Delete the selected block">
+          <svg class="i" viewBox="0 0 16 16"><use href="#ico-trash"/></svg>
+        </button>
       </div>
       <div class="hint">Blocks spawn in front of the robot. Click one to select it, drag to move it, and use the sliders to resize the selection. Walk onto a block and the feet follow its surface.</div>
     </div>
   </section>
 
   <section class="panel">
-    <h2>▸ CONTROLS</h2>
+    <h2>Controls</h2>
     <div class="panel-body keys">
       <div><b>W A S D</b> <span>walk, relative to heading</span></div>
-      <div><b>Q / E</b> <span>lower / raise the body</span></div>
-      <div><b>R</b> <span>toggle A/D: strafe ↔ turn</span></div>
+      <div><b>Q E</b> <span>lower and raise the body</span></div>
+      <div><b>R</b> <span>switch A/D between strafe and turn</span></div>
       <div><b>↑ ↓ ← →</b> <span>lean the body</span></div>
-      <div><b>Y</b> <span>toggle the octobot POV camera</span></div>
-      <div><b>P</b> <span>show / hide these panels</span></div>
-      <div><b>drag</b> <span>orbit · <b>wheel</b> zoom</span></div>
+      <div><b>Y</b> <span>onboard camera</span></div>
+      <div><b>P</b> <span>show or hide the panels</span></div>
+      <div><b>Drag</b> <span>orbit, wheel to zoom</span></div>
     </div>
   </section>
 </aside>
 
 <!-- ══════════ SERVO TELEMETRY ══════════ -->
-<aside id="right-panel" aria-label="servo telemetry">
+<aside id="right-panel" aria-label="Servo telemetry">
   <section class="panel">
-    <h2>▸ SERVO TELEMETRY</h2>
+    <h2>Servo angles</h2>
     <div class="panel-body">
       <table id="servo-table">
         <caption class="hidden">Live servo angles per leg</caption>
-        <thead><tr><th scope="col"><span class="hidden">leg</span></th><th scope="col">J0 YAW</th><th scope="col">J1 SHLD</th><th scope="col">J2 KNEE</th></tr></thead>
+        <thead><tr><th scope="col"><span class="hidden">Leg</span></th><th scope="col">Yaw</th><th scope="col">Shoulder</th><th scope="col">Knee</th></tr></thead>
         <tbody id="servo-rows"></tbody>
       </table>
     </div>
   </section>
 </aside>
 
-<footer id="statusbar" aria-label="status">
-  <div class="t-cell"><label>BODY</label><span id="t-body" class="mono">—</span></div>
-  <div class="t-cell"><label>HEIGHT</label><span id="t-height" class="mono">+0.00</span></div>
-  <div class="t-cell"><label>MODE</label><span id="t-mode" class="mono">A/D: STRAFE</span></div>
-  <div class="t-cell"><label>CAM</label><span id="t-cam" class="mono">ORBIT</span></div>
-  <div class="t-cell"><label>BLOCKS</label><span id="t-blocks" class="mono">0</span></div>
+<footer id="statusbar" class="statusbar" aria-label="Status">
+  <div class="t-cell"><label>State</label><span id="t-state">Boot</span></div>
+  <div class="t-cell wide"><label>Body</label><span id="t-body">—</span></div>
+  <div class="t-cell"><label>Height</label><span id="t-height">+0.00</span></div>
+  <div class="t-cell"><label>Speed</label><span id="t-speed">0.00</span></div>
+  <div class="t-cell"><label>Tilt</label><span id="t-tilt">0°</span></div>
+  <div class="t-cell"><label>Planted</label><span id="t-feet">8</span></div>
+  <div class="t-cell"><label>Saturated</label><span id="t-sat">0</span></div>
+  <div class="t-cell"><label>Blocked</label><span id="t-blocked">0</span></div>
+  <div class="t-cell"><label>Stranded</label><span id="t-strand">0</span></div>
+  <div class="t-cell"><label>Climbing</label><span id="t-climb">0</span></div>
+  <div class="t-cell"><label>A / D</label><span id="t-mode">Strafe</span></div>
+  <div class="t-cell"><label>Camera</label><span id="t-cam">Orbit</span></div>
+  <div class="t-cell"><label>Blocks</label><span id="t-blocks">0</span></div>
 </footer>
 
 <script type="module" src="js/playground.js"></script>

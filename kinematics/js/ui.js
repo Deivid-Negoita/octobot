@@ -7,13 +7,20 @@ import { GAITS } from './gait.js';
 import {
   setMode, setActiveChain, selectJoint,
   rebaselineCollisions, maybeRigOctobot, gaitBodyModel, setRigVisible,
-  frameModel,
+  frameRig,
 } from './main.js';
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
 const fmt = (v, d = 2) => (v < 0 ? '' : '+') + v.toFixed(d);
 const fmtV = v => `${fmt(v.x)} ${fmt(v.y)} ${fmt(v.z)}`;
+
+// Telemetry rewrites the same nodes several times a second. Skipping unchanged
+// values keeps most of those ticks from touching the DOM at all.
+const setText = (el, value) => {
+  const s = String(value);
+  if (el.textContent !== s) el.textContent = s;
+};
 
 export function initUI(App) {
   let toastTimer = null;
@@ -42,10 +49,11 @@ export function initUI(App) {
   // clicking the dimmed backdrop dismisses; clicking the card itself must not
   helpModal.addEventListener('mousedown', e => { if (e.target === helpModal) setHelp(false); });
 
-  // the sidebar overlaps the model on narrow screens, so it has to be dismissible
-  const sidebar = $('sidebar');
+  // both columns hide together, for an unobstructed look at the rig
+  const columns = [$('sidebar'), $('sidebar-right')];
   function togglePanels() {
-    const collapsed = sidebar.classList.toggle('collapsed');
+    const collapsed = !columns[0].classList.contains('collapsed');
+    for (const col of columns) col.classList.toggle('collapsed', collapsed);
     $('btn-panels').setAttribute('aria-expanded', String(!collapsed));
     $('btn-panels').classList.toggle('on', collapsed);
   }
@@ -60,7 +68,7 @@ export function initUI(App) {
     a.download = 'ik-rig.json';
     a.click();
     URL.revokeObjectURL(a.href);
-    toast('rig exported');
+    toast('Rig exported to ik-rig.json');
   });
 
   // ------------------------------------------------ legs panel
@@ -75,7 +83,7 @@ export function initUI(App) {
     if (!d) return;
     const v = parseInt(e.target.value, 10);
     d.j.maxBend = v;
-    $('val-bend').textContent = v >= 180 ? 'FREE' : v + '°';
+    $('val-bend').textContent = v >= 180 ? 'free' : v + '°';
     d.sel.chain.targetDirty = true;
   });
 
@@ -117,23 +125,30 @@ export function initUI(App) {
     d.sel.chain.targetDirty = true;
   });
 
+  const icon = (name, cls = 'i') =>
+    `<svg class="${cls}" viewBox="0 0 16 16"><use href="#ico-${name}"/></svg>`;
+
   function refreshChainList() {
     const list = $('chain-list');
     list.innerHTML = '';
     for (const c of App.chains) {
       const row = document.createElement('div');
-      row.className = 'row chain-row' + (c === App.activeChain ? ' active' : '');
+      row.className = 'chain-row' + (c === App.activeChain ? ' active' : '');
       row.innerHTML = `
         <span class="dot" style="background:${hex(c.color)}"></span>
         <span class="grow">${c.name}</span>
-        <span class="dim">${c.joints.length}J</span>
-        <button class="mini" title="toggle visibility">${c.visible ? '◉' : '◌'}</button>`;
+        <span class="dim">${c.joints.length} joints</span>
+        <button class="mini" title="${c.visible ? 'Hide this leg' : 'Show this leg'}"
+          >${icon(c.visible ? 'eye' : 'eye-off')}</button>`;
       row.addEventListener('click', () => setActiveChain(c));
-      const visBtn = row.querySelector('button');
-      visBtn.addEventListener('click', e => { e.stopPropagation(); c.setVisible(!c.visible); refreshChainList(); });
+      row.querySelector('button').addEventListener('click', e => {
+        e.stopPropagation();
+        c.setVisible(!c.visible);
+        refreshChainList();
+      });
       list.appendChild(row);
     }
-    if (!App.chains.length) list.innerHTML = '<div class="empty">loading the octobot…</div>';
+    if (!App.chains.length) list.innerHTML = '<div class="empty">Loading the octobot…</div>';
   }
 
   // per-joint rotation readout: signed servo angle for hinges, bend for balls
@@ -156,14 +171,14 @@ export function initUI(App) {
     jointRows = [];
     const c = App.activeChain;
     if (!c || !c.joints.length) {
-      list.innerHTML = '<div class="empty">select a leg</div>';
+      list.innerHTML = '<div class="empty">Select a leg</div>';
       return;
     }
     c.joints.forEach((j, i) => {
       const row = document.createElement('div');
       const selected = App.selectedJoint?.chain === c && App.selectedJoint.index === i;
-      row.className = 'row joint-row' + (selected ? ' active' : '');
-      const tag = i === 0 ? 'ROOT' : (i === c.joints.length - 1 ? 'EE' : 'J' + i);
+      row.className = 'joint-row' + (selected ? ' active' : '');
+      const tag = i === 0 ? 'root' : (i === c.joints.length - 1 ? 'foot' : 'J' + i);
       row.innerHTML = `
         <span class="jtag">${tag}</span>
         <span class="jpos mono"></span>
@@ -183,8 +198,8 @@ export function initUI(App) {
     const c = App.activeChain;
     if (!c || jointRows.length !== c.joints.length) { refreshJointList(); return; }
     for (const r of jointRows) {
-      r.posEl.textContent = fmtV(c.joints[r.index].pos);
-      r.angEl.textContent = jointAngleText(c, r.index);
+      setText(r.posEl, fmtV(c.joints[r.index].pos));
+      setText(r.angEl, jointAngleText(c, r.index));
     }
   }
 
@@ -203,7 +218,7 @@ export function initUI(App) {
       $('row-axis').classList.add('hidden');
       $('row-range').classList.add('hidden');
       $('sel-joint-type').parentElement.classList.add('hidden');
-      hint.textContent = 'end effector — constraints apply to joints with an outgoing bone';
+      hint.textContent = 'The foot has no outgoing link, so there is nothing to constrain here.';
       return;
     }
     $('sel-joint-type').parentElement.classList.remove('hidden');
@@ -213,7 +228,7 @@ export function initUI(App) {
     $('row-axis').classList.toggle('hidden', !isHinge);
     $('row-range').classList.toggle('hidden', !(isHinge && j.hingePreset === 'hcustom'));
     $('inp-bend').value = j.maxBend;
-    $('val-bend').textContent = j.maxBend >= 180 ? 'FREE' : j.maxBend + '°';
+    $('val-bend').textContent = j.maxBend >= 180 ? 'free' : j.maxBend + '°';
     $('inp-range').value = j.hingeRange;
     $('val-range').textContent = j.hingeRange + '°';
     for (const b of document.querySelectorAll('#seg-axis button')) {
@@ -222,13 +237,13 @@ export function initUI(App) {
       b.setAttribute('aria-pressed', String(on));
     }
     if (isHinge && j.axisVec) {
-      hint.textContent = 'auto-rig leg-frame axis · pick X/Y/Z to override';
+      hint.textContent = 'Axis measured from the CAD servo shaft. Pick X, Y or Z to override it.';
     } else if (isHinge) {
-      hint.textContent = 'FABRIK only · sweeps around the axis, centered on the rest (build) pose';
+      hint.textContent = 'FABRIK only. The sweep is centred on the rest pose.';
     } else {
       hint.textContent = sel.index === 0
-        ? 'cone limit has no effect on the root — use HINGE for a constrained base'
-        : 'FABRIK only · limits bend vs previous segment';
+        ? 'A cone limit has no effect on the root. Use a hinge for a constrained base.'
+        : 'FABRIK only. Limits bend against the previous segment.';
     }
   }
 
@@ -288,7 +303,7 @@ export function initUI(App) {
   });
   $('inp-cycle').addEventListener('input', e => {
     App.gait.cycleTime = parseFloat(e.target.value);
-    $('val-cycle').textContent = App.gait.cycleTime.toFixed(1) + 's';
+    $('val-cycle').textContent = App.gait.cycleTime.toFixed(1) + ' s';
   });
   $('inp-stride').addEventListener('input', e => {
     App.gait.stride = parseFloat(e.target.value);
@@ -308,8 +323,10 @@ export function initUI(App) {
   }
 
   function updateWalkButton() {
-    $('btn-walk').textContent = App.gait.active ? '❚❚ WALKING' : '▶ WALK';
-    $('btn-walk').classList.toggle('playing', App.gait.active);
+    const walking = App.gait.active;
+    $('btn-walk-label').textContent = walking ? 'Walking' : 'Walk';
+    $('ico-walk-state').innerHTML = `<use href="#ico-${walking ? 'pause' : 'play'}"/>`;
+    $('btn-walk').classList.toggle('playing', walking);
   }
   function toggleWalk() {
     if (App.gait.active) {
@@ -317,13 +334,13 @@ export function initUI(App) {
       if (App.mode === 'solve') setMode('solve'); // re-attach target gizmo
     } else {
       const legs = App.chains.filter(c => c.joints.length >= 2 && c.visible);
-      if (legs.length < 2) { toast('the octobot is still loading', true); return; }
+      if (legs.length < 2) { toast('The octobot is still loading.', true); return; }
       App.tcontrols.detach();
       if (!App.gait.start(legs, gaitBodyModel())) {
-        toast('could not start gait', true);
+        toast('Could not start the gait.', true);
         return;
       }
-      toast('walking — ' + GAITS[App.gait.gait].label);
+      toast('Walking: ' + GAITS[App.gait.gait].label);
     }
     updateWalkButton();
   }
@@ -339,7 +356,7 @@ export function initUI(App) {
   const boot = createBoot();
 
   function onOctobotLoaded(model) {
-    boot.stage('BUILDING RIG');
+    boot.stage('Building the rig');
     App.scene.add(model.group);
     App.models.push(model);
     // Recolour before rigging. The auto-rig reparents meshes out of model.group
@@ -353,12 +370,12 @@ export function initUI(App) {
       return;
     }
     if (App.contactShadow) App.contactShadow.visible = true;
-    frameModel(model.group);
+    frameRig();
     boot.done();
     if (rig) {
-      toast(`octobot rigged — ${rig.legs} legs, ${rig.bound?.legs ?? 0} parts bound · press ▶ WALK`);
+      toast(`Rigged: ${rig.legs} legs, ${rig.bound?.legs ?? 0} parts bound. Press Space to walk.`);
     } else {
-      toast('octobot loaded but could not be rigged', true);
+      toast('The octobot loaded but could not be rigged.', true);
     }
   }
 
@@ -369,7 +386,7 @@ export function initUI(App) {
     (loaded, total) => {
       boot.progress(loaded, total);
       // the GLTF parse happens once the last byte lands, and it is not instant
-      if (total && loaded >= total) boot.stage('PARSING MESH');
+      if (total && loaded >= total) boot.stage('Parsing the mesh');
     },
   );
 
@@ -382,28 +399,27 @@ export function initUI(App) {
     const status = c ? c.status : 'ok';
     el.classList.remove('ok', 'reach', 'collision');
     if (status === 'collision') {
-      const reasons = [...(c.collision?.reasons ?? [])].join(', ');
-      el.textContent = 'COLLISION';
-      el.title = 'blocked by: ' + reasons;
+      el.textContent = 'Collision';
+      el.title = 'Blocked by: ' + [...(c.collision?.reasons ?? [])].join(', ');
       el.classList.add('collision');
     } else if (status === 'reach') {
-      el.textContent = 'OUT OF REACH';
-      el.title = 'target beyond total chain length';
+      el.textContent = 'Out of reach';
+      el.title = 'The target is beyond the total chain length';
       el.classList.add('reach');
     } else {
       el.textContent = 'OK';
       el.title = '';
       el.classList.add('ok');
     }
-    // toast once per status transition
+    // toast once per status transition, not once per frame
     const key = c ? c.name + ':' + status : '';
     if (key !== lastStatusKey) {
       lastStatusKey = key;
       if (status === 'collision') {
         const reasons = [...(c.collision?.reasons ?? [])].join(', ');
-        toast('⚠ TARGET BLOCKED — collision with: ' + (reasons || 'obstacle'), true);
+        toast('Target blocked, collision with ' + (reasons || 'an obstacle'), true);
       } else if (status === 'reach') {
-        toast('target out of reach — arm fully extended', true);
+        toast('Target out of reach, the leg is fully extended', true);
       }
     }
   }
@@ -413,18 +429,18 @@ export function initUI(App) {
     if (telemetryTimer < 0.12) return;
     telemetryTimer = 0;
     const c = App.activeChain;
-    $('t-fps').textContent = App.fps;
+    // the render loop only runs on frames that can look different
+    setText($('t-fps'), App.fps || 'idle');
     if (!c || c.joints.length < 2) {
-      $('t-ee').textContent = '—'; $('t-target').textContent = '—';
-      $('t-err').textContent = '—'; $('t-iter').textContent = '—'; $('t-ms').textContent = '—';
+      for (const id of ['t-ee', 't-target', 't-err', 't-iter', 't-ms']) setText($(id), '—');
       updateStatus(null);
       return;
     }
-    $('t-ee').textContent = fmtV(c.endEffector);
-    $('t-target').textContent = fmtV(c.target);
-    $('t-err').textContent = (c.lastStats.error * 1000).toFixed(1) + ' mm';
-    $('t-iter').textContent = c.lastStats.iterations;
-    $('t-ms').textContent = c.lastStats.ms.toFixed(2) + ' ms';
+    setText($('t-ee'), fmtV(c.endEffector));
+    setText($('t-target'), fmtV(c.target));
+    setText($('t-err'), (c.lastStats.error * 1000).toFixed(1) + ' mm');
+    setText($('t-iter'), c.lastStats.iterations);
+    setText($('t-ms'), c.lastStats.ms.toFixed(2) + ' ms');
     $('t-err').classList.toggle('bad', c.lastStats.error > c.tolerance * 5 + 1e-9);
     updateStatus(c);
     if (App.gait.active || App.tcontrols.dragging) softRefreshJoints();
@@ -438,7 +454,7 @@ export function initUI(App) {
       $(id).classList.toggle('on', on);
       $(id).setAttribute('aria-pressed', String(on));
     }
-    $('t-mode').textContent = App.mode.toUpperCase();
+    $('t-mode').textContent = App.mode === 'build' ? 'Joints' : 'Solve';
   }
 
   function refreshAll() {
@@ -448,7 +464,7 @@ export function initUI(App) {
     refreshSolver();
     onModeChanged();
     updateWalkButton();
-    $('t-chain').textContent = App.activeChain ? App.activeChain.name : '—';
+    setText($('t-chain'), App.activeChain ? App.activeChain.name : '—');
   }
 
   const helpOpen = () => helpModal.classList.contains('open');

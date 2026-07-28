@@ -6,11 +6,11 @@
 <title>Octobot — IK Workbench</title>
 <meta name="description" content="Browser workbench for an eight-legged robot: the CAD model rigs itself on load, then you constrain the servo joints, solve inverse kinematics against a draggable target, and run a gait.">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0b0d10">
+<meta name="theme-color" content="#0d0f12">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/console.css">
 <link rel="stylesheet" href="css/workbench.css">
 <script type="importmap">
@@ -25,17 +25,34 @@
 <body>
 
 <div id="viewport"></div>
-<div id="scanlines"></div>
+
+<!-- icon definitions, referenced by <use> throughout the page -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="ico-mark"><circle cx="8" cy="8" r="3.1"/><path d="M8 4.9V1.4M8 11.1v3.5M4.9 8H1.4M11.1 8h3.5M5.8 5.8 3.3 3.3M10.2 5.8l2.5-2.5M5.8 10.2l-2.5 2.5M10.2 10.2l2.5 2.5"/></g>
+    <g id="ico-panels"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M6.2 3v10"/></g>
+    <g id="ico-joints"><circle cx="4" cy="12" r="1.8"/><circle cx="12" cy="4" r="1.8"/><path d="M5.3 10.7 10.7 5.3"/></g>
+    <g id="ico-solve"><circle cx="8" cy="8" r="5.2"/><circle cx="8" cy="8" r="1.4"/></g>
+    <g id="ico-export"><path d="M8 2v8M5 7.2 8 10.2l3-3M3 12.5h10"/></g>
+    <g id="ico-help"><circle cx="8" cy="8" r="6"/><path d="M6.3 6.2a1.75 1.75 0 1 1 2.4 1.62c-.42.18-.7.6-.7 1.06v.3"/><path d="M8 11.6h.01"/></g>
+    <g id="ico-arrow"><path d="M3 8h10M9.5 4.5 13 8l-3.5 3.5"/></g>
+    <g id="ico-play"><path d="M5 3.2 12.5 8 5 12.8z"/></g>
+    <g id="ico-pause"><path d="M5.5 3.5v9M10.5 3.5v9"/></g>
+    <g id="ico-stop"><rect x="4.2" y="4.2" width="7.6" height="7.6" rx="1"/></g>
+    <g id="ico-eye"><path d="M1.5 8S4 3.8 8 3.8 14.5 8 14.5 8 12 12.2 8 12.2 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="1.9"/></g>
+    <g id="ico-eye-off"><path d="M2 2l12 12M6.3 4.3A6.9 6.9 0 0 1 8 4.1c4 0 6.5 3.9 6.5 3.9a12 12 0 0 1-2 2.4M4.4 5.6A12 12 0 0 0 1.5 8S4 11.9 8 11.9c.7 0 1.3-.1 1.9-.3"/></g>
+  </defs>
+</svg>
 
 <!-- ══════════ BOOT ══════════ -->
 <div id="boot" role="status" aria-live="polite">
   <div class="boot-card">
-    <div class="boot-mark" aria-hidden="true">◢◤</div>
-    <h1>OCTOBOT<span>//</span>IK WORKBENCH</h1>
-    <p class="boot-sub">ARTICULATION &amp; SIMULATION</p>
+    <svg class="boot-mark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><use href="#ico-mark"/></svg>
+    <h1>Octobot IK Workbench</h1>
+    <p class="boot-sub">Articulation and simulation</p>
     <div class="boot-bar indeterminate" id="boot-bar"><i></i></div>
     <div class="boot-stat">
-      <span id="boot-stage">FETCHING MESH</span>
+      <span id="boot-stage">Fetching mesh</span>
       <span id="boot-pct"></span>
     </div>
     <p class="boot-note">The chassis mesh is about 12 MB. It loads once, then rigs itself into eight servo-driven legs.</p>
@@ -44,148 +61,170 @@
 
 <!-- ══════════ TOP BAR ══════════ -->
 <header id="topbar">
-  <button id="btn-panels" class="btn ghost" aria-expanded="true" aria-controls="sidebar" title="show / hide the side panels">☰ <kbd>P</kbd></button>
+  <button id="btn-panels" class="btn ghost icon" aria-expanded="true" aria-controls="sidebar sidebar-right" title="Show or hide the panels (P)">
+    <svg class="i" viewBox="0 0 16 16"><use href="#ico-panels"/></svg>
+  </button>
   <div class="brand">
-    <span class="brand-mark" aria-hidden="true">◢◤</span>
-    <h1>OCTOBOT<span>//</span>IK WORKBENCH</h1>
-    <span class="brand-sub">ARTICULATION &amp; SIMULATION</span>
+    <svg class="brand-mark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><use href="#ico-mark"/></svg>
+    <h1>Octobot IK Workbench</h1>
+    <span class="brand-sub">Articulation and simulation</span>
   </div>
-  <div class="topbar-group" role="group" aria-label="interaction mode">
-    <button id="btn-mode-build" class="btn" aria-pressed="false" title="select and inspect joints">⬡ JOINTS <kbd>1</kbd></button>
-    <button id="btn-mode-solve" class="btn" aria-pressed="true" title="drag the target, solve IK">◎ SOLVE <kbd>2</kbd></button>
+  <div class="topbar-group segmented" role="group" aria-label="Interaction mode">
+    <button id="btn-mode-build" class="btn" aria-pressed="false" title="Select and inspect joints (1)">
+      <svg class="i" viewBox="0 0 16 16"><use href="#ico-joints"/></svg> Joints <kbd>1</kbd>
+    </button>
+    <button id="btn-mode-solve" class="btn" aria-pressed="true" title="Drag the target and solve IK (2)">
+      <svg class="i" viewBox="0 0 16 16"><use href="#ico-solve"/></svg> Solve <kbd>2</kbd>
+    </button>
   </div>
   <div class="topbar-group right">
-    <a class="btn ghost" href="playground.html" title="drive the octobot around a terrain course">⇄ PLAYGROUND</a>
-    <button id="btn-export" class="btn ghost" title="download rig + servo angles as JSON">⭳ EXPORT</button>
-    <button id="btn-help" class="btn ghost" aria-haspopup="dialog" title="how this works">? <kbd>H</kbd></button>
+    <a class="btn ghost" href="playground.html" title="Drive the octobot over a terrain course">
+      Playground <svg class="i" viewBox="0 0 16 16"><use href="#ico-arrow"/></svg>
+    </a>
+    <button id="btn-export" class="btn ghost" title="Download the rig and servo angles as JSON">
+      <svg class="i" viewBox="0 0 16 16"><use href="#ico-export"/></svg> Export
+    </button>
+    <button id="btn-help" class="btn ghost icon" aria-haspopup="dialog" title="How this works (H)">
+      <svg class="i" viewBox="0 0 16 16"><use href="#ico-help"/></svg>
+    </button>
   </div>
 </header>
 
-<!-- ══════════ SIDEBAR ══════════ -->
-<aside id="sidebar" aria-label="rig controls">
+<!-- ══════════ RIG COLUMN ══════════ -->
+<aside id="sidebar" aria-label="Rig controls">
 
-  <section class="panel">
-    <h2>▸ LEGS</h2>
-    <div class="panel-body">
+  <section class="panel" id="panel-legs">
+    <h2>Legs</h2>
+    <div class="panel-body scroll">
       <div id="chain-list"></div>
-      <div class="subhead">JOINTS <span class="dim">pos&nbsp;/&nbsp;angle</span></div>
+      <div class="subhead">Joints <span class="dim">position / angle</span></div>
       <div id="joint-list"></div>
       <div id="joint-inspector" class="inspector disabled">
         <div class="row">
-          <label for="sel-joint-type">JOINT TYPE</label>
+          <label for="sel-joint-type">Joint type</label>
           <select id="sel-joint-type">
-            <option value="ball">BALL · CONE</option>
-            <option value="h180">HINGE · 180°</option>
-            <option value="h360">HINGE · 360°</option>
-            <option value="hcustom">HINGE · CUSTOM</option>
+            <option value="ball">Ball, cone limit</option>
+            <option value="h180">Hinge, 180°</option>
+            <option value="h360">Hinge, 360°</option>
+            <option value="hcustom">Hinge, custom</option>
           </select>
         </div>
         <div class="row" id="row-bend">
-          <label for="inp-bend">BEND LIMIT</label>
+          <label for="inp-bend">Bend limit</label>
           <input type="range" id="inp-bend" min="10" max="180" step="5" value="180">
-          <span class="val" id="val-bend">FREE</span>
+          <span class="val" id="val-bend">free</span>
         </div>
         <div class="row" id="row-axis">
-          <label id="lbl-axis">HINGE AXIS</label>
+          <label id="lbl-axis">Hinge axis</label>
           <div class="seg" id="seg-axis" role="group" aria-labelledby="lbl-axis">
             <button data-axis="x" aria-pressed="false">X</button><button data-axis="y" aria-pressed="false">Y</button><button data-axis="z" aria-pressed="false">Z</button>
           </div>
         </div>
         <div class="row" id="row-range">
-          <label for="inp-range">SWEEP</label>
+          <label for="inp-range">Sweep</label>
           <input type="range" id="inp-range" min="10" max="360" step="5" value="180">
           <span class="val" id="val-range">180°</span>
         </div>
-        <div class="hint" id="inspector-hint">FABRIK only · limits bend vs previous segment</div>
+        <div class="hint" id="inspector-hint">FABRIK only. Limits bend against the previous segment.</div>
       </div>
     </div>
   </section>
 
+</aside>
+
+<!-- ══════════ SOLVER COLUMN ══════════ -->
+<aside id="sidebar-right" class="scroll" aria-label="Solver and gait controls">
+
   <section class="panel">
-    <h2>▸ SOLVER</h2>
+    <h2>Solver</h2>
     <div class="panel-body">
       <div class="row">
-        <label for="sel-solver">ALGORITHM</label>
+        <label for="sel-solver">Algorithm</label>
         <select id="sel-solver">
           <option value="fabrik">FABRIK</option>
           <option value="ccd">CCD</option>
         </select>
       </div>
       <div class="row">
-        <label for="inp-iterations">ITERATIONS</label>
+        <label for="inp-iterations">Iterations</label>
         <input type="range" id="inp-iterations" min="1" max="64" step="1" value="16">
         <span class="val" id="val-iterations">16</span>
       </div>
       <div class="row">
-        <label for="inp-tolerance">TOLERANCE</label>
-        <input type="range" id="inp-tolerance" min="-4" max="-1" step="0.1" value="-2.7" aria-label="solver tolerance, logarithmic">
+        <label for="inp-tolerance">Tolerance</label>
+        <input type="range" id="inp-tolerance" min="-4" max="-1" step="0.1" value="-2.7" aria-label="Solver tolerance, logarithmic">
         <span class="val" id="val-tolerance">2e-3</span>
       </div>
-      <div class="subhead">COLLISION GUARD</div>
+      <div class="subhead">Collision guard</div>
       <div class="row checks">
-        <label class="chk"><input type="checkbox" id="chk-col-models" checked> MODELS</label>
-        <label class="chk"><input type="checkbox" id="chk-col-self" checked> SELF</label>
-        <label class="chk"><input type="checkbox" id="chk-col-floor" checked> FLOOR</label>
+        <label class="chk"><input type="checkbox" id="chk-col-models" checked> Models</label>
+        <label class="chk"><input type="checkbox" id="chk-col-self" checked> Self</label>
+        <label class="chk"><input type="checkbox" id="chk-col-floor" checked> Floor</label>
       </div>
-      <div class="hint">A pose that would hit something is rejected. The chain freezes at its last safe pose and STATUS turns red.</div>
+      <div class="hint">A pose that would hit something is rejected. The chain holds its last safe pose and the status reads Collision.</div>
     </div>
   </section>
 
   <section class="panel">
-    <h2>▸ GAIT</h2>
+    <h2>Gait</h2>
     <div class="panel-body">
       <div class="row">
-        <label for="sel-gait">PATTERN</label>
+        <label for="sel-gait">Pattern</label>
         <select id="sel-gait"></select>
       </div>
       <div class="row">
-        <label for="sel-heading">HEADING</label>
+        <label for="sel-heading">Heading</label>
         <select id="sel-heading">
-          <option value="0,0,-1" selected>FORWARD (−Z)</option>
-          <option value="0,0,1">BACKWARD (+Z)</option>
-          <option value="-1,0,0">LEFT (−X)</option>
-          <option value="1,0,0">RIGHT (+X)</option>
+          <option value="0,0,-1" selected>Forward (−Z)</option>
+          <option value="0,0,1">Backward (+Z)</option>
+          <option value="-1,0,0">Left (−X)</option>
+          <option value="1,0,0">Right (+X)</option>
         </select>
       </div>
       <div class="row">
-        <label for="inp-cycle">CYCLE</label>
+        <label for="inp-cycle">Cycle</label>
         <input type="range" id="inp-cycle" min="0.6" max="4" step="0.1" value="2">
-        <span class="val" id="val-cycle">2.0s</span>
+        <span class="val" id="val-cycle">2.0 s</span>
       </div>
       <div class="row">
-        <label for="inp-stride">STRIDE</label>
+        <label for="inp-stride">Stride</label>
         <input type="range" id="inp-stride" min="0.1" max="1.2" step="0.05" value="0.45">
         <span class="val" id="val-stride">0.45</span>
       </div>
       <div class="row">
-        <label for="inp-lift">LIFT</label>
+        <label for="inp-lift">Lift</label>
         <input type="range" id="inp-lift" min="0.05" max="0.6" step="0.01" value="0.2">
         <span class="val" id="val-lift">0.20</span>
       </div>
       <div class="btn-row">
-        <button id="btn-walk" class="btn accent grow">▶ WALK <kbd>Space</kbd></button>
-        <button id="btn-walk-stop" class="btn" aria-label="stop walking and restore the pose" title="stop and restore the pose">■</button>
+        <button id="btn-walk" class="btn accent grow">
+          <svg class="i" viewBox="0 0 16 16" id="ico-walk-state"><use href="#ico-play"/></svg>
+          <span id="btn-walk-label">Walk</span> <kbd>Space</kbd>
+        </button>
+        <button id="btn-walk-stop" class="btn icon" aria-label="Stop walking and restore the pose" title="Stop and restore the pose">
+          <svg class="i" viewBox="0 0 16 16"><use href="#ico-stop"/></svg>
+        </button>
       </div>
       <div class="row checks">
-        <label class="chk"><input type="checkbox" id="chk-show-rig"> SHOW RIG BONES</label>
+        <label class="chk"><input type="checkbox" id="chk-show-rig"> Show rig bones</label>
       </div>
-      <div class="hint">WALK drives the body and all eight legs. STOP restores the starting pose.</div>
+      <div class="hint">Walk drives the body and all eight legs. Stop restores the starting pose.</div>
     </div>
   </section>
 
 </aside>
 
-<!-- ══════════ TELEMETRY ══════════ -->
-<footer id="telemetry" aria-label="telemetry">
-  <div class="t-cell"><label>MODE</label><span id="t-mode">SOLVE</span></div>
-  <div class="t-cell"><label>STATUS</label><span id="t-status" class="ok">OK</span></div>
-  <div class="t-cell"><label>CHAIN</label><span id="t-chain">—</span></div>
-  <div class="t-cell wide"><label>END EFFECTOR</label><span id="t-ee" class="mono">—</span></div>
-  <div class="t-cell wide"><label>TARGET</label><span id="t-target" class="mono">—</span></div>
-  <div class="t-cell"><label>ERROR</label><span id="t-err" class="mono">—</span></div>
-  <div class="t-cell"><label>ITER</label><span id="t-iter" class="mono">—</span></div>
-  <div class="t-cell"><label>SOLVE</label><span id="t-ms" class="mono">—</span></div>
-  <div class="t-cell"><label>FPS</label><span id="t-fps" class="mono">—</span></div>
+<!-- ══════════ STATUS ══════════ -->
+<footer id="telemetry" class="statusbar" aria-label="Telemetry">
+  <div class="t-cell"><label>Mode</label><span id="t-mode">Solve</span></div>
+  <div class="t-cell"><label>Status</label><span id="t-status" class="ok">OK</span></div>
+  <div class="t-cell"><label>Chain</label><span id="t-chain">—</span></div>
+  <div class="t-cell wide"><label>End effector</label><span id="t-ee">—</span></div>
+  <div class="t-cell wide"><label>Target</label><span id="t-target">—</span></div>
+  <div class="t-cell"><label>Error</label><span id="t-err">—</span></div>
+  <div class="t-cell"><label>Iterations</label><span id="t-iter">—</span></div>
+  <div class="t-cell"><label>Solve</label><span id="t-ms">—</span></div>
+  <div class="t-cell"><label>FPS</label><span id="t-fps">—</span></div>
 </footer>
 
 <!-- ══════════ OVERLAYS ══════════ -->
@@ -193,19 +232,19 @@
 
 <div id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
   <div class="help-card">
-    <h3 id="help-title">◢◤ OCTOBOT IK WORKBENCH — OPERATION</h3>
+    <h3 id="help-title">Octobot IK workbench</h3>
     <table>
-      <tr><td class="k">STARTUP</td><td>The octobot loads and rigs itself: eight legs (LEG-1…8), each a hip-yaw → shoulder-pitch → knee-pitch chain on the real servo axes, with every mesh bound to its link.</td></tr>
-      <tr><td class="k">JOINTS <kbd>1</kbd></td><td>Click a leg in the list or a joint in the scene to select it. The inspector shows that servo's type, hinge axis and sweep limits. The JOINTS list streams live position and angle for every joint.</td></tr>
-      <tr><td class="k">SOLVE <kbd>2</kbd></td><td>Drag the cyan target. That leg solves toward it in real time and the servo angles update live.</td></tr>
-      <tr><td class="k">GAIT <kbd>Space</kbd></td><td>Pick a pattern and heading, then press WALK to drive all eight legs. STOP restores the pose. SHOW RIG BONES reveals the skeleton inside the mesh.</td></tr>
-      <tr><td class="k">COLLISION</td><td>Poses that would drive a bone through the chassis, another bone, or the floor are rejected. The leg freezes at its last safe pose, the offending bones flash red, and STATUS reads COLLISION.</td></tr>
-      <tr><td class="k">EXPORT</td><td>Downloads the rig and the current servo angles as JSON for the real controller.</td></tr>
-      <tr><td class="k">CAMERA</td><td>Drag to orbit, wheel to zoom, right-drag to pan. <kbd>F</kbd> re-frames the robot, <kbd>P</kbd> hides the panels for a clear view.</td></tr>
+      <tr><td class="k">Startup</td><td>The octobot loads and rigs itself: eight legs, each a hip-yaw → shoulder-pitch → knee-pitch chain on the real servo axes, with every mesh bound to the link it is screwed to.</td></tr>
+      <tr><td class="k">Joints <kbd>1</kbd></td><td>Click a leg in the list or a joint in the scene to select it. The inspector shows that servo's type, hinge axis and sweep limit. The joint list streams live position and angle.</td></tr>
+      <tr><td class="k">Solve <kbd>2</kbd></td><td>Drag the target. That leg solves toward it in real time and the servo angles update live.</td></tr>
+      <tr><td class="k">Gait <kbd>Space</kbd></td><td>Pick a pattern and heading, then Walk to drive all eight legs. Stop restores the pose. Show rig bones reveals the skeleton inside the mesh.</td></tr>
+      <tr><td class="k">Collision</td><td>Poses that would drive a link through the chassis, another link, or the floor are rejected. The leg holds its last safe pose and the offending links turn red.</td></tr>
+      <tr><td class="k">Export</td><td>Downloads the rig and the current servo angles as JSON for the controller.</td></tr>
+      <tr><td class="k">Camera</td><td>Drag to orbit, wheel to zoom, right-drag to pan. <kbd>F</kbd> re-frames the robot, <kbd>P</kbd> hides the panels.</td></tr>
     </table>
     <div class="help-foot">
       <span class="hint">Press <kbd>Esc</kbd> to close.</span>
-      <button id="help-close" class="btn accent">CLOSE</button>
+      <button id="help-close" class="btn accent">Close</button>
     </div>
   </div>
 </div>

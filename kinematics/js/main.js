@@ -25,24 +25,24 @@ const App = {
   ui: null,
   fps: 0,
 };
-window.__IK_APP = App; // debugging hooks
-window.__THREE = THREE;
+window.__IK_APP = App; // console handle for debugging
 
-// ---------------------------------------------------------------- scene
+const BG = 0x0d0f12;
+
+// --- scene -----------------------------------------------------------------
 
 function initScene() {
   const viewport = document.getElementById('viewport');
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  // the governor owns the pixel ratio from here
-  App.govern = createResolutionGovernor(renderer);
+  App.govern = createResolutionGovernor(renderer); // owns the pixel ratio
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.95;
   viewport.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0d10);
-  scene.fog = new THREE.Fog(0x0b0d10, 22, 55);
+  scene.background = new THREE.Color(BG);
+  scene.fog = new THREE.Fog(BG, 22, 55);
 
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.05, 200);
   camera.position.set(6.5, 4.5, 7.5);
@@ -55,38 +55,36 @@ function initScene() {
   orbit.minDistance = 1;
   orbit.maxDistance = 40;
 
-  // Lighting. The printed parts are near-black PBR, so directional light alone
-  // leaves the whole robot a silhouette — the metal has nothing to reflect.
-  // A prefiltered room probe gives every surface an environment to sample, which
-  // is what makes the edges and the servo horns read at all.
+  // The printed parts are dark, low-metalness PBR. Without an environment to
+  // sample they render as a flat silhouette, so a prefiltered room probe carries
+  // the ambient term and the three directional lights only have to carve shape.
   const pmrem = new THREE.PMREMGenerator(renderer);
   pmrem.compileEquirectangularShader();
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   pmrem.dispose();
 
-  // The probe supplies the ambient term, so the direct lights only have to carve
-  // shape. Pushing them harder flattens the chassis into a white sheet.
-  scene.add(new THREE.HemisphereLight(0x8fa3bf, 0x1a1410, 0.22));
-  const key = new THREE.DirectionalLight(0xfff2dd, 1.15);
-  key.position.set(6, 10, 4);
-  scene.add(key);
-  const fill = new THREE.DirectionalLight(0xbcd0e8, 0.28);
-  fill.position.set(-5, 3, 8);
-  scene.add(fill);
-  const rim = new THREE.DirectionalLight(0x53d5e6, 0.6);
-  rim.position.set(-8, 4, -6);
-  scene.add(rim);
+  // Near-neutral rig: a warm key against a cooler sky and rim. Above about 1.2
+  // on the key the chassis blows out to white.
+  scene.add(new THREE.HemisphereLight(0xb4bcc4, 0x1a1410, 0.24));
+  for (const [color, intensity, x, y, z] of [
+    [0xfff2dd, 1.15, 6, 10, 4],    // key
+    [0xd2d8de, 0.28, -5, 3, 8],    // fill
+    [0xc8d2da, 0.45, -8, 4, -6],   // rim
+  ]) {
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(x, y, z);
+    scene.add(light);
+  }
 
-  // floor grids
-  const grid = new THREE.GridHelper(30, 30, 0x2a323e, 0x1a2028);
+  // Two grids: metre squares over a finer 200 mm mesh, for a sense of scale.
+  const grid = new THREE.GridHelper(30, 30, 0x2c333d, 0x1b2028);
   grid.material.transparent = true;
-  grid.material.opacity = 0.85;
+  grid.material.opacity = 0.8;
   scene.add(grid);
-  const gridFine = new THREE.GridHelper(30, 150, 0x141a21, 0x12171d);
+  const gridFine = new THREE.GridHelper(30, 150, 0x161b21, 0x14181e);
   gridFine.position.y = -0.002;
   scene.add(gridFine);
 
-  // origin axes (short)
   const axes = new THREE.AxesHelper(0.8);
   axes.position.y = 0.001;
   scene.add(axes);
@@ -108,6 +106,14 @@ function initScene() {
   tcontrols.addEventListener('objectChange', onGizmoChange);
   scene.add(tcontrols);
 
+  // Anything that can change what the viewport shows re-arms the render loop.
+  // The document-level listeners cover every panel control in one place, which
+  // beats threading an invalidate() call through each handler.
+  orbit.addEventListener('change', invalidate);
+  for (const type of ['pointerdown', 'pointermove', 'wheel', 'input', 'change', 'keydown']) {
+    document.addEventListener(type, invalidate, { passive: true, capture: true });
+  }
+
   let resizeTimer = 0;
   window.addEventListener('resize', () => {
     // dragging a window edge fires this continuously, and each call reallocates
@@ -117,56 +123,127 @@ function initScene() {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      invalidate();
     }, 80);
   });
 
   Object.assign(App, { scene, camera, renderer, orbit, tcontrols });
 }
 
-// ---------------------------------------------------------------- framing
+// --- framing ---------------------------------------------------------------
 
 /**
- * Point the camera at `object` and pull back far enough to hold all of it.
- * The rig is built from CAD, so its size is only known after the GLB parses —
- * a hardcoded start pose leaves the robot small and off-centre. Called once,
- * from the load handler.
- *
- * `leftBias` shifts the subject right in screen space to clear the sidebar.
+ * The part of the window no panel is covering, in CSS pixels. The chrome is
+ * fixed-position over a full-bleed canvas, so a model centred in the window is
+ * not centred in the space the user can actually see.
  */
-export function frameModel(object, { padding = 1.45, leftBias = 0.16 } = {}) {
+function clearViewRect() {
+  const W = window.innerWidth, H = window.innerHeight;
+  const shown = id => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains('collapsed') ? el.getBoundingClientRect() : null;
+  };
+  let x = 0, right = W, y = 0, bottom = H;
+  const left = shown('sidebar');
+  if (left) x = left.right + 12;
+  const rightCol = shown('sidebar-right');
+  if (rightCol) right = rightCol.left - 12;
+  const bar = document.getElementById('topbar')?.getBoundingClientRect();
+  if (bar) y = bar.bottom;
+  const foot = document.getElementById('telemetry')?.getBoundingClientRect();
+  if (foot) bottom = foot.top;
+
+  const w = right - x, h = bottom - y;
+  // a small window leaves nothing usable free — frame against the whole viewport
+  return (w < 240 || h < 240) ? { x: 0, y: 0, w: W, h: H } : { x, y, w, h };
+}
+
+/**
+ * Half-extent of the geometry under `roots` along each of `axes`, measured from
+ * `centre`. Vertices are sampled rather than read in full: this runs on every
+ * re-frame, and a few dozen points per mesh place the silhouette to well inside
+ * the framing margin.
+ */
+function extentsAlong(roots, centre, axes) {
+  const out = axes.map(() => 0);
+  const v = new THREE.Vector3();
+  for (const root of roots) {
+    if (!root) continue;
+    root.updateMatrixWorld(true);
+    root.traverse(o => {
+      const pos = o.isMesh && o.geometry?.attributes?.position;
+      if (!pos) return;
+      const stride = Math.max(1, Math.floor(pos.count / 48));
+      for (let i = 0; i < pos.count; i += stride) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).sub(centre);
+        for (let a = 0; a < axes.length; a++) {
+          out[a] = Math.max(out[a], Math.abs(v.dot(axes[a])));
+        }
+      }
+    });
+  }
+  return out;
+}
+
+/**
+ * Point the camera at `objects` and pull back far enough to hold all of them
+ * inside the clear view rect. The rig comes from CAD, so its size is only known
+ * once the GLB has parsed; a hardcoded start pose leaves the robot small and
+ * off-centre.
+ */
+export function frameModel(objects, { padding = 1.08 } = {}) {
   const { camera, orbit } = App;
-  const box = new THREE.Box3().setFromObject(object);
+  const roots = (Array.isArray(objects) ? objects : [objects]).filter(Boolean);
+  const box = new THREE.Box3();
+  for (const o of roots) box.union(new THREE.Box3().setFromObject(o));
   if (box.isEmpty()) return;
 
-  const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
+  const view = clearViewRect();
+  const W = window.innerWidth, H = window.innerHeight;
 
-  // distance that fits the bounding sphere in the *narrower* of the two FOVs
-  const radius = size.length() / 2;
-  const vFov = THREE.MathUtils.degToRad(camera.fov);
-  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
-  const dist = (radius / Math.sin(Math.min(vFov, hFov) / 2)) * padding;
+  // full-frame half-angles, then the same angles narrowed to the clear rect
+  const halfV = THREE.MathUtils.degToRad(camera.fov) / 2;
+  const halfH = Math.atan(Math.tan(halfV) * camera.aspect);
+  const fitV = Math.atan(Math.tan(halfV) * view.h / H);
+  const fitH = Math.atan(Math.tan(halfH) * view.w / W);
 
-  // keep the existing three-quarter view direction, just re-seat it
+  // Fit the geometry itself. The octobot is a wide flat disc, so both its bounding
+  // sphere and its bounding box stick out well past anything the camera sees, and
+  // fitting either leaves the robot small in the middle of an empty frame.
   const dir = new THREE.Vector3(0.62, 0.42, 0.66).normalize();
+  const basis = new THREE.Matrix4().lookAt(_fv.copy(center).add(dir), center, camera.up);
+  const bx = new THREE.Vector3().setFromMatrixColumn(basis, 0);
+  const by = new THREE.Vector3().setFromMatrixColumn(basis, 1);
+  const ex = extentsAlong(roots, center, [bx, by, dir]);
+  const dist = (Math.max(ex[0] / Math.tan(fitH), ex[1] / Math.tan(fitV)) + ex[2]) * padding;
+
   orbit.target.copy(center);
   camera.position.copy(center).addScaledVector(dir, dist);
+  orbit.update();               // aims the camera, so its basis is now valid
+  camera.updateMatrixWorld();
 
-  // slide the target sideways so the sidebar does not cover the subject
-  if (leftBias) {
-    const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
-    const shift = right.multiplyScalar(-radius * leftBias * 2);
-    orbit.target.add(shift);
-    camera.position.add(shift);
-  }
+  // Move the camera sideways until the model sits at the centre of the clear rect
+  // rather than the centre of the window. Shifting the camera and its target
+  // together displaces the subject by the same amount in the opposite direction.
+  const ndcX = (view.x + view.w / 2) / W * 2 - 1;
+  const ndcY = 1 - (view.y + view.h / 2) / H * 2;
+  const camBasis = camera.matrixWorld.elements;
+  const shift = new THREE.Vector3(camBasis[0], camBasis[1], camBasis[2])
+    .multiplyScalar(-ndcX * Math.tan(halfH) * dist)
+    .addScaledVector(new THREE.Vector3(camBasis[4], camBasis[5], camBasis[6]),
+                     -ndcY * Math.tan(halfV) * dist);
+  orbit.target.add(shift);
+  camera.position.add(shift);
 
   camera.near = Math.max(0.01, dist / 200);
   camera.far = dist * 12;
   camera.updateProjectionMatrix();
   orbit.update();
+  invalidate();
 }
 
-// ---------------------------------------------------------------- gizmo / modes
+// --- gizmo / modes ---------------------------------------------------------
 
 function onGizmoChange() {
   const obj = App.tcontrols.object;
@@ -245,7 +322,7 @@ function deleteChain(chain) {
   App.ui?.refreshAll();
 }
 
-// ---------------------------------------------------------------- gait auto-rig
+// --- gait auto-rig ---------------------------------------------------------
 
 /**
  * Find the 8 (or however many) feet of a loaded walker model by clustering
@@ -304,11 +381,10 @@ export function maybeRigOctobot(model) {
   const box = new THREE.Box3().setFromObject(model.group);
   box.getCenter(center);
 
-  // real articulation pivots come from the CAD occurrences: each leg has three
-  // servos, and each servo's SHAFT (not its body center) is where the joint
-  // axis runs — through the horn on one side and the bearing casing on the
-  // other. The shaft is located as the overlap between the servo's box and the
-  // link it drives (art_1/2/3), which wraps the shaft/bearing coaxially.
+  // Pivots come from the CAD occurrences. Each leg has three servos, and the
+  // joint axis runs through the servo shaft rather than the body centre. The
+  // shaft is where the servo's bounding box overlaps the link it drives
+  // (art_1/2/3), because that link wraps the shaft and bearing coaxially.
   let occRoot = model._rot;
   while (occRoot.children.length === 1) occRoot = occRoot.children[0];
   const servos = [];   // { center, box, node }
@@ -346,13 +422,11 @@ export function maybeRigOctobot(model) {
   App.gait.stop();
   for (const c of [...App.chains]) deleteChain(c);
 
-  // Servo mounting:
-  //  - HIP: inverted "double-head" trick — the horn is anchored to the chassis,
-  //    so the servo BODY rotates on the spot together with its casing and both
-  //    articulation attachment points (one on the head, one riding the bearing).
-  //    Everything at the hip except the chassis bracket moves with the coxa.
-  //  - SHOULDER / KNEE: conventional — servo + casing bolted to the link BEFORE
-  //    the joint; only the articulation on the horn rotates.
+  // Two servo mounting styles on this robot:
+  //   hip — inverted, the horn is anchored to the chassis, so the servo body and
+  //     its casing rotate on the spot with the coxa.
+  //   shoulder and knee — conventional, the servo is bolted to the link before
+  //     the joint and only the part on the horn rotates.
   const nodeAssign = new Map(); // node → { group: 'body'|boneIndex, d }
   const claim = (node, group, d) => {
     const prev = nodeAssign.get(node);
@@ -376,11 +450,10 @@ export function maybeRigOctobot(model) {
     const mount = shaftPivot(legServos[0], arts[0], fAng, angOf);
     const shoulder = shaftPivot(legServos[1], arts[1], fAng, angOf);
     const knee = shaftPivot(legServos[2], arts[2], fAng, angOf);
-    // Ground truth for every part: it rigidly follows the articulation link it
-    // is SCREWED to, i.e. the one its mesh overlaps most. This handles all mount
-    // styles automatically — the hip servo body overlaps the coxa (inverted
-    // "double-head" trick, so it spins with the coxa), while the knee servo body
-    // overlaps the femur (conventional mount, so it stays put as the tibia bends).
+    // Every part follows the link it is screwed to, which is the link its mesh
+    // overlaps most. That covers both mount styles without a special case: the
+    // hip servo body overlaps the coxa and turns with it, the knee servo body
+    // overlaps the femur and stays put as the tibia bends.
     const legArts = arts.map(list => {
       let best = null, bestA = 0.33;
       for (const a of list) {
@@ -389,15 +462,11 @@ export function maybeRigOctobot(model) {
       }
       return best ? { ...best, bearingErr: bestA } : null;
     });
-    // Claim the coxa / femur / tibia for THIS leg, exactly like every servo and
-    // bracket already is. Without this they were the one part class left with no
-    // exact claim: the assigner matched them by name and returned a bare bone
-    // index, and binding.js resolves a bare index against whichever leg its
-    // bearing heuristic picked. When that guess missed, the whole articulation
-    // link jumped to a neighbouring leg while its servo — exactly claimed —
-    // stayed behind. That is the part visibly detaching from the servo.
-    // The score is the bearing error, so if two legs both reach for the same
-    // link the closer one keeps it.
+    // Claim the coxa, femur and tibia for this leg explicitly. A bare bone index
+    // would leave binding.js to resolve the leg from its bearing heuristic, and a
+    // miss there sends the link to a neighbouring leg while its servo, claimed
+    // exactly, stays behind. Scoring by bearing error means the closer leg keeps
+    // a link both reach for.
     legArts.forEach((a, i) => {
       if (a) claim(a.node, { chain, bone: i }, -1e6 + a.bearingErr);
     });
@@ -420,11 +489,9 @@ export function maybeRigOctobot(model) {
       return (bestIdx >= 0 && bestVol > 0.12 * ownVol) ? { bone: bestIdx, vol: bestVol } : null;
     };
 
-    // Bind every movable part — servo bodies, their casing/second-head
-    // sub-pieces, and yokes — by the link it's SCREWED to (max mesh overlap).
-    // A part that overlaps nothing clearly (a casing boss sitting right on a
-    // joint axis) falls back to the nearest joint pivot, so it stays at that
-    // axis and spins in place like a servo head instead of being left behind.
+    // A part that overlaps no link clearly — a casing boss sitting right on a
+    // joint axis — falls back to the nearest pivot, so it spins in place there
+    // instead of being left behind.
     const pivots = [[mount, 0], [shoulder, 1], [knee, 2]];
     const bindMovable = o => {
       const ob = overlapBone(o.box);
@@ -436,20 +503,13 @@ export function maybeRigOctobot(model) {
       }
       if (bg >= 0) claim(o.node, { chain, bone: bg }, bd);
     };
-    // Servo bodies (with their nested casing sub-parts) follow the double-head
-    // mount: the body is carried by the articulation it drives, while its heads
-    // sit ON the joint axis so they only spin in place, never translate away.
-    //   hip → coxa (drives the coxa, spins in place on the yaw axis)
-    //   shoulder → femur (drives the femur, rotates with it)
-    //   knee → femur (drives the tibia, so it STAYS as the knee bends)
-    // Bbox overlap is unreliable here (a servo body straddles its joint), so
-    // these use an explicit map; -Infinity outranks any overlap/pivot claim.
-    // Each servo is two meshes: the BODY and a small HORN/head. They sit on
-    // OPPOSITE sides of the joint — the body is carried by one link while the
-    // head is anchored across the joint, staying seated in its bearing.
-    //   hip:      body→coxa,  head→chassis
-    //   shoulder: body→femur, head→coxa   (head stays fixed as the femur swings)
-    //   knee:     body→femur, head→tibia  (body stays as the tibia swings)
+    // A servo body straddles its own joint, so box overlap cannot place it. Each
+    // servo is two meshes sitting on opposite sides of the joint, and the pairing
+    // is known from the assembly, so map it explicitly. -Infinity outranks any
+    // overlap or pivot claim.
+    //   hip:      body → coxa,  head → chassis
+    //   shoulder: body → femur, head → coxa   (head stays as the femur swings)
+    //   knee:     body → femur, head → tibia  (body stays as the tibia bends)
     const servoParentBone = [0, 1, 1];
     const servoHeadBone = ['body', 0, 2];
     const _b3 = new THREE.Vector3();
@@ -470,13 +530,12 @@ export function maybeRigOctobot(model) {
       for (let k = 1; k < kids.length; k++) {
         servoHeadNodes.push(kids[k]);
         const hb = servoHeadBone[i];
-        // 'body' must be passed through as the literal chassis marker — wrapping
-        // it in { bone } makes binding.js run Math.min('body', n) → NaN
+        // 'body' is binding.js's literal chassis marker, so pass it through as-is
         claim(kids[k], hb === 'body' ? 'body' : { chain, bone: hb }, -Infinity);
       }
     });
-    // Yokes / brackets bind by their screwed connection (overlap): a fixed
-    // casing overlaps the parent link, a driven bracket overlaps the child.
+    // Yokes and brackets fall out of the same overlap rule: a fixed casing
+    // overlaps the parent link, a driven bracket overlaps the child.
     for (const o of others) bindMovable(o);
     chain.addJoint(mount);
     chain.addJoint(shoulder);
@@ -486,10 +545,9 @@ export function maybeRigOctobot(model) {
     // horizontal axis perpendicular to the leg's radial plane
     const out = _fv.set(foot.x - center.x, 0, foot.z - center.z).normalize();
     const pitchAxis = new THREE.Vector3(0, 1, 0).cross(out).normalize();
-    // Sweeps come from the real servo travel (octorig's LIMITS, one source of
-    // truth with the playground): each limit is a ±angle about the rest pose, so
-    // the total sweep is twice it. Hand-picked wider numbers used to live here,
-    // which let the workbench bend legs further than the hardware ever could.
+    // Sweeps are the real servo travel, from octorig's LIMITS so the workbench
+    // and the playground cannot disagree. Each limit is a ± angle about the rest
+    // pose, so the sweep is twice it.
     const deg = THREE.MathUtils.radToDeg;
     const setup = [
       { axis: new THREE.Vector3(0, 1, 0), range: 2 * deg(LIMITS.yaw) },      // hip yaw servo
@@ -518,9 +576,8 @@ export function maybeRigOctobot(model) {
   App.ui?.syncGaitInputs?.();
   App.activeChain = App.chains[0] ?? null;
   App.selectedJoint = null;
-  // octobot part placement: articulation links by name; servos + casings by
-  // identified occurrence to the PARENT side of their joint; everything else
-  // keeps the geometric nearest-bone rule.
+  // Placement order: an exact claim from the pass above, then the link name, then
+  // binding.js's geometric nearest-bone rule for anything left.
   const octobotAssigner = (name, centroid, legIdx, chain, bearingErr, gate, node) => {
     const a = nodeAssign.get(node);
     if (a) return a.group;
@@ -532,8 +589,7 @@ export function maybeRigOctobot(model) {
   buildChassisBox(model);
   measureBoneRadii();
   setMode('solve');
-  // the mesh is the visualization now — hide the colored rig skeleton by default
-  setRigVisible(false);
+  setRigVisible(false); // the mesh is the visualisation; the skeleton is a debug view
   App.ui?.refreshAll();
   return { legs: feet.length, bound };
 }
@@ -541,16 +597,13 @@ export function maybeRigOctobot(model) {
 /**
  * Give every bone the thickness of the parts bound to it.
  *
- * The collision guard works on bone segments, which are infinitely thin lines
- * running down the middle of each link. What the user actually sees is the
- * mesh, and a coxa or femur is a wide bracket-and-servo cluster — so a pose
- * could have parts visibly buried in the chassis while the bone line itself
- * passed cleanly through open air, and the guard saw nothing. Measuring each
- * bone's radius from its own bound geometry is what connects the two.
+ * The collision guard tests bone segments, which are infinitely thin lines down
+ * the middle of each link, while a coxa or femur is really a wide bracket and
+ * servo cluster. Without a radius, a pose can bury parts in the chassis while the
+ * bone line itself passes through open air.
  *
- * A mid percentile, not the max: these clusters have outlying mounting ears
- * whose distance would inflate the whole link into a sphere and make every pose
- * a collision.
+ * A mid percentile rather than the maximum: these clusters have outlying mounting
+ * ears that would inflate the link into a sphere and make every pose a collision.
  */
 function measureBoneRadii(pct = 0.55) {
   const v = new THREE.Vector3();
@@ -584,17 +637,15 @@ function pointSegDist(p, a, b) {
   return _fv.copy(a).addScaledVector(_psA, t).distanceTo(p);
 }
 
-// Fraction of the body plate's span kept as the collision box. Tuned by
-// measuring rest-pose intrusion: the largest box for which no bone of any of the
-// 8 legs overlaps it while standing, so nothing gets baselined into a blind spot.
+// Fraction of the body plate's span kept as the collision box: the largest box no
+// leg overlaps at the rest pose. A contact that exists at rest is absorbed into
+// the guard's baseline, which would turn that bone into a permanent blind spot.
 const CHASSIS_KEEP = { x: 0.72, y: 0.9, z: 0.42 };
 
 /**
- * Box of everything that stayed with the body — the chassis plate and the
- * electronics on it, i.e. the meshes binding did NOT pull into a leg group.
- * Stored in model-local space so it rides along when the gait carries the robot.
- * Shrunk a little in XZ: the plate's outer edge is where the hip brackets bolt
- * on, and those legitimately sit right against it.
+ * Box around everything that stayed with the body: the chassis plate and the
+ * electronics on it, meaning the meshes binding did not pull into a leg group.
+ * Held in model space so it rides along when the gait carries the robot.
  */
 function buildChassisBox(model) {
   App.chassis = null;
@@ -618,17 +669,24 @@ function buildChassisBox(model) {
     }
   }
   if (seen < 8 || box.isEmpty()) return;
-  // Keep only the central core. The plate is a star whose spokes reach out to
-  // the hips, so its full box swallows each leg's tibia even at the rest pose —
-  // and a contact present at rest is absorbed into the guard's baseline, turning
-  // that bone into a permanent blind spot. CHASSIS_KEEP is the fraction of the
-  // span retained (not an inset: shrinking both sides by a fraction of the full
-  // size collapses the box once that fraction passes 0.5).
+  // Keep the central core only. The plate is a star whose spokes reach out to the
+  // hips, so its full box swallows each leg's tibia even at rest. Scale the span
+  // rather than inset it: insetting both sides by a fraction of the full size
+  // collapses the box once that fraction passes 0.5.
   const c = box.getCenter(new THREE.Vector3());
   const s = box.getSize(new THREE.Vector3());
   box.setFromCenterAndSize(c, new THREE.Vector3(
     s.x * CHASSIS_KEEP.x, s.y * CHASSIS_KEEP.y, s.z * CHASSIS_KEEP.z));
   App.chassis = { box, inv, model };
+}
+
+/**
+ * Everything the camera should frame. Binding reparents each leg's meshes out of
+ * the model group and into its own bone group, so the model group on its own is
+ * just the chassis.
+ */
+export function frameRig() {
+  frameModel([App.models[0]?.group, ...App.binding.links.map(l => l.group)]);
 }
 
 /** Show/hide the colored rig bones + joints + targets (mesh stays put). */
@@ -655,7 +713,7 @@ export function rebaselineCollisions() {
   for (const c of App.chains) { c.resetSafety(); c.targetDirty = true; }
 }
 
-// ---------------------------------------------------------------- picking
+// --- picking ---------------------------------------------------------------
 
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2();
@@ -704,7 +762,7 @@ function handleClick(e) {
   if (App.selectedJoint) selectJoint(null);
 }
 
-// ---------------------------------------------------------------- attached models
+// --- attached models -------------------------------------------------------
 
 const _mDir = new THREE.Vector3();
 const _mUp = new THREE.Vector3(0, 1, 0);
@@ -726,7 +784,7 @@ function updateAttachedModels() {
   }
 }
 
-// ---------------------------------------------------------------- keyboard
+// --- keyboard --------------------------------------------------------------
 
 function initKeys() {
   window.addEventListener('keydown', e => {
@@ -745,8 +803,7 @@ function initKeys() {
         App.togglePanels?.();
         break;
       case 'KeyF':
-        // re-frame after the camera has been orbited somewhere unhelpful
-        if (App.models[0]) frameModel(App.models[0].group);
+        if (App.models[0]) frameRig(); // re-frame after orbiting somewhere unhelpful
         break;
       case 'Space':
         e.preventDefault();
@@ -756,15 +813,40 @@ function initKeys() {
   });
 }
 
-// ---------------------------------------------------------------- loop
+// --- loop ------------------------------------------------------------------
 
 const clock = new THREE.Clock();
 const _camDelta = new THREE.Vector3();
-let fpsAccum = 0, fpsFrames = 0, fpsTimer = 0;
+let fpsFrames = 0, fpsTimer = 0;
+
+// Nothing moves in this scene unless the user or the gait moves it, so the loop
+// only does work on frames that can look different. IDLE_PERIOD is a slow
+// heartbeat: some drivers do not preserve the drawing buffer indefinitely, and
+// one frame a second costs nothing.
+const IDLE_PERIOD = 1;
+let needsRender = true;
+let idleFor = 0;
+
+export function invalidate() { needsRender = true; }
 
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.1);
+
+  // frames actually rendered per second — reads 0 while the loop is idle
+  fpsTimer += dt;
+  if (fpsTimer >= 0.5) {
+    App.fps = Math.round(fpsFrames / fpsTimer);
+    fpsFrames = 0; fpsTimer = 0;
+  }
+
+  idleFor += dt;
+  if (!needsRender && !App.gait.active && idleFor < IDLE_PERIOD) {
+    App.ui?.updateTelemetry(dt);
+    return;
+  }
+  needsRender = false;
+  idleFor = 0;
 
   App.orbit.update();
 
@@ -784,9 +866,9 @@ function tick() {
     App._followPos = null;
   }
 
-  // the chassis box lives in model space; refresh its inverse each frame so the
-  // guard follows the robot while the gait carries it across the grid
-  if (App.chassis) {
+  // The chassis box is stored in model space. Its inverse only goes stale when
+  // the gait carries the robot, so recompute it then and not on every frame.
+  if (App.chassis && App.gait.active) {
     App.chassis.model.group.updateMatrixWorld(true);
     App.chassis.inv.copy(App.chassis.model.group.matrixWorld).invert();
   }
@@ -801,13 +883,7 @@ function tick() {
   updateAttachedModels();
   App.binding.update();
 
-  // fps
-  fpsAccum += dt; fpsFrames++;
-  fpsTimer += dt;
-  if (fpsTimer > 0.5) {
-    App.fps = Math.round(fpsFrames / fpsAccum);
-    fpsAccum = 0; fpsFrames = 0; fpsTimer = 0;
-  }
+  fpsFrames++;
   App.ui?.updateTelemetry(dt);
 
   // keep the contact shadow under the body
@@ -821,7 +897,7 @@ function tick() {
   App.renderer.render(App.scene, App.camera);
 }
 
-// ---------------------------------------------------------------- boot
+// --- boot ------------------------------------------------------------------
 
 initScene();
 App.gait = new GaitEngine();

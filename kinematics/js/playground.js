@@ -43,6 +43,13 @@ const $ = id => document.getElementById(id);
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const clamp = THREE.MathUtils.clamp;
 
+// Telemetry rewrites the same nodes several times a second. Skipping unchanged
+// values keeps most of those ticks from touching the DOM at all.
+const setText = (el, value) => {
+  const s = String(value);
+  if (el.textContent !== s) el.textContent = s;
+};
+
 const LIM_DEG_Y = THREE.MathUtils.radToDeg(LIMITS.yaw) * 0.92;
 const LIM_DEG_S = THREE.MathUtils.radToDeg(LIMITS.shoulder) * 0.92;
 const LIM_DEG_K = THREE.MathUtils.radToDeg(LIMITS.knee) * 0.92;
@@ -52,7 +59,7 @@ const notSat = leg => { const a = leg.angles; return Math.abs(a.yaw) < LIM_DEG_Y
 // a wall of state dumps. Add ?debug to the URL to switch them back on.
 const DEBUG = new URLSearchParams(location.search).has('debug');
 
-// ---------------------------------------------------------------- scene
+// --- scene -----------------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 // the governor owns the pixel ratio from here
@@ -85,14 +92,15 @@ pmrem.dispose();
 
 // The probe supplies the ambient term, so the direct lights only have to carve
 // shape. Pushing them harder flattens the chassis into a white sheet.
-scene.add(new THREE.HemisphereLight(0x8fa3bf, 0x1a1410, 0.22));
+// Near-neutral rig, same as the workbench — see the note in main.js.
+scene.add(new THREE.HemisphereLight(0xb4bcc4, 0x1a1410, 0.24));
 const key = new THREE.DirectionalLight(0xfff2dd, 1.15);
 key.position.set(6, 10, 4);
 scene.add(key);
-const fill = new THREE.DirectionalLight(0xbcd0e8, 0.28);
+const fill = new THREE.DirectionalLight(0xd2d8de, 0.28);
 fill.position.set(-5, 3, 8);
 scene.add(fill);
-const rim = new THREE.DirectionalLight(0x53d5e6, 0.6);
+const rim = new THREE.DirectionalLight(0xc8d2da, 0.45);
 rim.position.set(-8, 4, -6);
 scene.add(rim);
 
@@ -129,7 +137,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ---------------------------------------------------------------- collision helpers
+// --- collision helpers -----------------------------------------------------
 function pointInBlock(x, y, z) {
   for (const b of blocks) {
     const p = b.mesh.position;
@@ -180,7 +188,7 @@ function heightAtFootprintDense(cx, cz, quat, halfW = 0.55, halfL = 0.55, step =
   return maxH;
 }
 
-// ---------------------------------------------------------------- terrain blocks
+// --- terrain blocks --------------------------------------------------------
 const blocks = [];
 const blockGeo = new THREE.BoxGeometry(1, 1, 1);
 const blockMat = new THREE.MeshStandardMaterial({ color: 0x3e4a5a, roughness: 0.7, metalness: 0.1 });
@@ -281,7 +289,7 @@ window.addEventListener('keydown', e => {
   dragging = null; orbit.enabled = true; selectBlock(null);
 });
 
-// ---------------------------------------------------------------- input
+// --- input -----------------------------------------------------------------
 const keys = {};
 window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
@@ -306,11 +314,11 @@ $('btn-panels').addEventListener('click', togglePanels);
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 function updateModeUI() {
-  const md = $('t-mode'); if (md) md.textContent = turnMode ? 'A/D: TURN' : 'A/D: STRAFE';
-  const cm = $('t-cam'); if (cm) cm.textContent = povMode ? 'POV' : 'ORBIT';
+  setText($('t-mode'), turnMode ? 'Turn' : 'Strafe');
+  setText($('t-cam'), povMode ? 'Onboard' : 'Orbit');
 }
 
-// ---------------------------------------------------------------- robot & gait
+// --- robot & gait ----------------------------------------------------------
 const UP = V(0, 1, 0);
 const body = {
   pos: V(0, 0, 0), heightOffset: 0, vel: V(), heading: 0,
@@ -805,7 +813,7 @@ function polygonArea(poly) {
 }
 function predictBody(dt) { return body.pos.clone().add(body.vel.clone().multiplyScalar(dt)); }
 
-// ---------------------------------------------------------------- main gait update
+// --- main gait update ------------------------------------------------------
 function updateGait(dt) {
   const prevBodyPos = _camD.copy(body.pos).clone();
   // last frame's float/saturation drive this frame's walk-caution (no ordering cycle)
@@ -1239,7 +1247,7 @@ function updateGait(dt) {
   }
 }
 
-// ---------------------------------------------------------------- UI panels
+// --- UI panels -------------------------------------------------------------
 function buildContactPanel() {
   const servoTable = $('servo-rows');
   if (!servoTable) return;
@@ -1247,7 +1255,7 @@ function buildContactPanel() {
   const wrap = document.createElement('div');
   wrap.className = 'contact-panel';
   wrap.innerHTML = `
-    <div class="subhead">LEG CONTACT <span class="dim">planted</span></div>
+    <div class="subhead">Foot contact <span class="dim">planted</span></div>
     <table id="contact-table">
       <tbody id="contact-rows"></tbody>
     </table>`;
@@ -1255,225 +1263,100 @@ function buildContactPanel() {
   const tbody = $('contact-rows');
   for (let i = 0; i < 8; i++) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="lg">LEG-${LEG_MAP[i]}</td><td id="lc${i}">0</td>`;
+    tr.innerHTML = `<td class="lg">LEG-${LEG_MAP[i]}</td><td class="state" id="lc${i}">down</td>`;
     tbody.appendChild(tr);
   }
 }
 function updateContactPanel() {
   if (!rig || !rig.legs) return;
   for (let i = 0; i < rig.legs.length && i < 8; i++) {
-    const actual = rig.footWorld(rig.legs[i]);
-    const contact = (actual.y - heightAt(actual.x, actual.z)) < 0.04 ? 1 : 0;
+    const foot = rig.footWorld(rig.legs[i]);
+    const down = (foot.y - heightAt(foot.x, foot.z)) < 0.04;
     const el = $(`lc${i}`);
-    if (el) {
-      el.textContent = contact;
-      el.style.color = contact ? '#46c98c' : '#e5484d';
-      el.classList.toggle('stranded', g_strand.includes(i));
-    }
+    if (!el) continue;
+    setText(el, down ? 'down' : 'up');
+    el.classList.toggle('off', !down);
+    el.classList.toggle('stranded', g_strand.includes(i));
   }
 }
 function buildTelemetry() {
   const tbody = $('servo-rows'); tbody.innerHTML = '';
   rig.legs.forEach((leg, i) => {
     const tr = document.createElement('tr');
-    tr.id = 'srow' + i; tr.className = 'srow';
-    tr.innerHTML = `<td class="lg" id="lg${i}">${leg.name}</td><td id="a${i}0"></td><td id="a${i}1"></td><td id="a${i}2"></td>`;
+    tr.id = 'srow' + i;
+    tr.innerHTML = `<td class="lg">${leg.name}</td><td id="a${i}0"></td><td id="a${i}1"></td><td id="a${i}2"></td>`;
     tbody.appendChild(tr);
   });
 }
+
+const LIMIT_DEG = [LIMITS.yaw, LIMITS.shoulder, LIMITS.knee].map(THREE.MathUtils.radToDeg);
+const signed = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '°';
+
 let telemetryTimer = 0;
 function updateTelemetry(dt) {
   telemetryTimer += dt; if (telemetryTimer < 0.1) return; telemetryTimer = 0;
-  const LD = [
-    THREE.MathUtils.radToDeg(LIMITS.yaw),
-    THREE.MathUtils.radToDeg(LIMITS.shoulder),
-    THREE.MathUtils.radToDeg(LIMITS.knee),
-  ];
+
   rig.legs.forEach((leg, i) => {
-    const f = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '°';
     const vals = [leg.angles.yaw, leg.angles.shoulder, leg.angles.knee];
-    const cells = [$('a' + i + '0'), $('a' + i + '1'), $('a' + i + '2')];
-    const danger = !!legDanger[i];
-    const assist = !!legState[i].assist;
-    const walled = !!legState[i].walled;
-    let heat = 0;
     for (let k = 0; k < 3; k++) {
-      cells[k].textContent = f(vals[k]);
-      const fr = Math.abs(vals[k]) / LD[k];
-      if (fr > heat) heat = fr;
-      if (danger) {
-        cells[k].style.color = k === 0 ? '#ff5d5d' : '#ff9a9a';
-        cells[k].style.textShadow = '0 0 9px rgba(229,72,77,.7)';
-      } else if (fr > 0.95) { cells[k].style.color = '#ff7a7a'; cells[k].style.textShadow = '0 0 8px rgba(229,72,77,.55)'; }
-      else if (fr > 0.80) { cells[k].style.color = '#f2a33c'; cells[k].style.textShadow = '0 0 7px rgba(242,163,60,.4)'; }
-      else { cells[k].style.color = ''; cells[k].style.textShadow = ''; }
+      const cell = $(`a${i}${k}`);
+      setText(cell, signed(vals[k]));
+      // how much of that servo's travel this pose is using
+      const used = Math.abs(vals[k]) / LIMIT_DEG[k];
+      cell.classList.toggle('near', used > 0.8 && used <= 0.95);
+      cell.classList.toggle('limit', used > 0.95);
     }
     const row = $('srow' + i);
-    if (row) {
-      if (danger) {
-        row.style.backgroundColor = 'rgba(229,72,77,.22)';
-        row.style.borderLeftColor = 'rgba(229,72,77,1)';
-        row.style.boxShadow = 'inset 2px 0 12px -2px rgba(229,72,77,.9)';
-      } else if (walled) {
-        row.style.backgroundColor = 'rgba(255,194,77,.15)';
-        row.style.borderLeftColor = 'rgba(255,194,77,.95)';
-        row.style.boxShadow = 'inset 2px 0 11px -3px rgba(255,194,77,.85)';
-      } else if (assist) {
-        row.style.backgroundColor = 'rgba(83,213,230,.15)';
-        row.style.borderLeftColor = 'rgba(83,213,230,.95)';
-        row.style.boxShadow = 'inset 2px 0 11px -3px rgba(83,213,230,.8)';
-      } else if (heat > 0.75) {
-        const a = ((heat - 0.75) / 0.25) * 0.16;
-        const rgb = heat > 0.95 ? '229,72,77' : '242,163,60';
-        row.style.backgroundColor = `rgba(${rgb},${a})`;
-        row.style.borderLeftColor = `rgba(${rgb},.9)`;
-        row.style.boxShadow = `inset 2px 0 9px -3px rgba(${rgb},.8)`;
-      } else {
-        row.style.backgroundColor = '';
-        row.style.borderLeftColor = 'transparent';
-        row.style.boxShadow = '';
-      }
-    }
-    const lg = $('lg' + i);
-    if (lg) lg.style.color = danger ? '#ff9a9a' : (walled ? '#ffd27a' : (assist ? '#7fe3ef' : ''));
+    row.classList.toggle('danger', !!legDanger[i]);
+    row.classList.toggle('walled', !legDanger[i] && !!legState[i].walled);
+    row.classList.toggle('assist', !legDanger[i] && !legState[i].walled && !!legState[i].assist);
   });
-  $('t-body').textContent = `${body.pos.x.toFixed(2)} ${(body.pos.y + PLATE_CENTER_Y).toFixed(2)} ${body.pos.z.toFixed(2)}`;
-  $('t-height').textContent = (body.heightOffset >= 0 ? '+' : '') + body.heightOffset.toFixed(2);
-  $('t-blocks').textContent = blocks.length;
+
+  setText($('t-body'), `${body.pos.x.toFixed(2)} ${(body.pos.y + PLATE_CENTER_Y).toFixed(2)} ${body.pos.z.toFixed(2)}`);
+  setText($('t-height'), (body.heightOffset >= 0 ? '+' : '') + body.heightOffset.toFixed(2));
+  setText($('t-blocks'), blocks.length);
   updateContactPanel();
-  updateStatusHUD();
+  updateStatus();
 }
 
-// ---------------------------------------------------------------- ambient + STATUS HUD
-let hudEls = null;
-function buildStatusHUD() {
-  document.getElementById('octo-hud')?.remove();
-  document.getElementById('octo-vignette')?.remove();
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes octo-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.3; transform:scale(.65); } }
-    @keyframes octo-cmd { 0%,100% { text-shadow:0 0 0 transparent; } 50% { text-shadow:0 0 9px rgba(242,163,60,.75); } }
-    @keyframes octo-glow { 0%,100% { text-shadow:0 0 0 transparent; } 50% { text-shadow:0 0 9px currentColor; } }
-    @keyframes octo-strand { 0%,100% { opacity:1; } 50% { opacity:.3; } }
-    @keyframes octo-climb { 0%,100% { transform:translateY(0); opacity:1; } 50% { transform:translateY(-2px); opacity:.55; } }
-    @keyframes octo-alarm { 0%,100% { box-shadow:0 0 10px currentColor; } 50% { box-shadow:0 0 18px currentColor, 0 0 4px #fff; } }
-    #octo-vignette { position:fixed; inset:0; z-index:5; pointer-events:none;
-      background:radial-gradient(120% 90% at 50% 38%, transparent 52%, rgba(0,0,0,.42) 100%);
-      mix-blend-mode:multiply; }
-    #octo-vignette::after { content:''; position:absolute; inset:0;
-      background:repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px); opacity:.5; }
-    #octo-hud { position:fixed; left:50%; bottom:46px; transform:translateX(-50%);
-      display:flex; gap:15px; align-items:center; padding:8px 16px; z-index:50;
-      background:linear-gradient(180deg, rgba(18,22,28,.92), rgba(11,13,16,.92));
-      border:1px solid #232b35; border-top:2px solid #f2a33c; border-radius:3px;
-      font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; letter-spacing:.6px;
-      color:#8fa3bf; pointer-events:none; backdrop-filter:blur(6px);
-      box-shadow:0 12px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.03);
-      transition:border-top-color .25s ease; }
-    #octo-hud.alarm { border-top-color:#e5484d; }
-    #octo-hud.riding { border-top-color:#ffc24d; }
-    #octo-hud .dot { width:8px; height:8px; border-radius:50%; background:#53d5e6;
-      box-shadow:0 0 10px currentColor; animation:octo-pulse 1.1s ease-in-out infinite; }
-    #octo-hud .dot.alarm { animation:octo-alarm .45s ease-in-out infinite; }
-    #octo-hud .dot.climb { animation:octo-climb .6s ease-in-out infinite; }
-    #octo-hud b { color:#d7dee7; font-weight:700; transition:color .2s ease; }
-    #octo-hud b.glow { animation:octo-glow .7s ease-in-out infinite; }
-    #octo-hud .k { color:#566273; }
-    #octo-hud .state { color:#f2a33c; min-width:56px; font-weight:800; letter-spacing:1px; }
-    #octo-hud .sep { width:1px; height:14px; background:#232b35; }
-    #octo-hud b.cmd { color:#f2a33c; animation:octo-cmd .5s ease-in-out infinite; }
-    #contact-rows td.stranded { animation:octo-strand .7s ease-in-out infinite; }
-    .srow { transition: background-color .3s ease, border-left-color .3s ease, box-shadow .3s ease;
-            border-left:2px solid transparent; }
-    .srow td { transition: color .2s ease, text-shadow .2s ease; }
-  `;
-  document.head.appendChild(style);
-  const vig = document.createElement('div'); vig.id = 'octo-vignette'; document.body.appendChild(vig);
-  const hud = document.createElement('div'); hud.id = 'octo-hud';
-  hud.innerHTML = `
-    <span class="dot" id="hud-dot"></span>
-    <span class="state" id="hud-state">BOOT</span>
-    <span class="sep"></span>
-    <span><span class="k">COL</span> <b id="hud-col">0</b></span>
-    <span><span class="k">STRAND</span> <b id="hud-strand">0</b></span>
-    <span><span class="k">WALL</span> <b id="hud-walled">0</b></span>
-    <span><span class="k">BLK</span> <b id="hud-blk">--</b></span>
-    <span><span class="k">TILT</span> <b id="hud-tilt">0°</b></span>
-    <span><span class="k">SAT</span> <b id="hud-sat">0</b></span>
-    <span><span class="k">FEET</span> <b id="hud-feet">8</b></span>
-    <span><span class="k">V</span> <b id="hud-vel">0.00</b></span>
-    <span><span class="k">H</span> <b id="hud-h">0.30</b></span>
-    <span><span class="k">FLT</span> <b id="hud-flt">0.00</b></span>
-    <span><span class="k">RNG</span> <b id="hud-rng">--</b></span>`;
-  document.body.appendChild(hud);
-  hudEls = {
-    wrap: hud, dot: hud.querySelector('#hud-dot'), state: hud.querySelector('#hud-state'),
-    col: hud.querySelector('#hud-col'), strand: hud.querySelector('#hud-strand'),
-    walled: hud.querySelector('#hud-walled'), blk: hud.querySelector('#hud-blk'),
-    tilt: hud.querySelector('#hud-tilt'), sat: hud.querySelector('#hud-sat'),
-    feet: hud.querySelector('#hud-feet'), vel: hud.querySelector('#hud-vel'),
-    h: hud.querySelector('#hud-h'), flt: hud.querySelector('#hud-flt'), rng: hud.querySelector('#hud-rng'),
-  };
+// --- status bar ------------------------------------------------------------
+
+// Gait state name -> how the status bar should read it. Every state the gait
+// can report needs an entry here, or the bar prints the internal name.
+const STATE_LABEL = {
+  BOOT: 'Starting', HOLD: 'Hold', GUARD: 'Blocked', CLIMB: 'Climbing',
+  COOP: 'Recovering', WALK: 'Walking', SETTLE: 'Settling', IDLE: 'Idle',
+};
+// Settling and recovering are ordinary transients, so they carry no tone.
+const STATE_TONE = { HOLD: 'err', GUARD: 'err', CLIMB: 'warn', WALK: 'ok' };
+
+/** Set a cell's value and its severity, touching the DOM only on a change. */
+function statusCell(id, value, tone = '') {
+  const el = $(id);
+  if (!el) return;
+  setText(el, value);
+  const cell = el.parentElement;
+  for (const t of ['ok', 'warn', 'err']) cell.classList.toggle(t, t === tone);
 }
-function updateStatusHUD() {
-  if (!hudEls) return;
+
+function updateStatus() {
   const d = g_diag;
-  const alarm = d.danger > 0 || d.unstable;
-  const climbing = d.state === 'CLIMB';
-  const coopActive = d.coop && d.vel < 0.01;
-  const riding = isFinite(d.blk);
-  let col = '#53d5e6';
-  if (d.unstable) col = '#e5484d';
-  else if (d.danger > 0) col = '#e5484d';
-  else if (climbing) col = '#ffc24d';
-  else if (coopActive) col = '#53d5e6';
-  else if (d.state === 'WALK') col = '#46c98c';
-  else if (d.soft) col = '#f2a33c';
-  hudEls.dot.style.color = col; hudEls.dot.style.background = col;
-  hudEls.dot.classList.toggle('alarm', alarm);
-  hudEls.dot.classList.toggle('climb', climbing && !alarm);
-  hudEls.wrap.classList.toggle('alarm', alarm);
-  hudEls.wrap.classList.toggle('riding', riding && !alarm);
-  hudEls.state.textContent = d.state; hudEls.state.style.color = col;
-  hudEls.col.textContent = d.col;
-  hudEls.col.style.color = d.col > 0 ? (d.danger > 0 ? '#ff7a7a' : '#ffb454') : '#46c98c';
-  hudEls.col.classList.toggle('glow', d.col > 0);
-  hudEls.strand.textContent = d.strand;
-  hudEls.strand.style.color = d.strand > 0 ? '#53d5e6' : '#566273';
-  hudEls.strand.classList.toggle('glow', d.strand > 0);
-  hudEls.walled.textContent = d.walled;
-  hudEls.walled.style.color = d.walled > 0 ? '#ffc24d' : '#566273';
-  hudEls.walled.classList.toggle('glow', d.walled > 0);
-  if (riding) { hudEls.blk.textContent = d.blk.toFixed(2); hudEls.blk.style.color = '#ffb454'; }
-  else { hudEls.blk.textContent = '--'; hudEls.blk.style.color = '#566273'; }
-  hudEls.tilt.textContent = d.tilt.toFixed(0) + '°';
-  hudEls.tilt.style.color = d.tilt > 12 ? '#ffb454' : (d.tilt > 3 ? '#8fa3bf' : '#566273');
-  hudEls.sat.textContent = d.sat; hudEls.sat.style.color = d.sat > 0 ? '#f2a33c' : '#46c98c';
-  hudEls.feet.textContent = d.planted; hudEls.feet.style.color = d.planted < 4 ? '#e5484d' : '#d7dee7';
-  hudEls.vel.textContent = d.vel.toFixed(2);
-  hudEls.h.textContent = (body.pos.y + PLATE_CENTER_Y).toFixed(2);
-  hudEls.h.classList.toggle('cmd', !!d.cmd);
-  hudEls.flt.textContent = d.float.toFixed(2); hudEls.flt.style.color = d.float > 0.04 ? '#e5484d' : '#8fa3bf';
-  if (isFinite(d.lo) && isFinite(d.hi)) {
-    hudEls.rng.textContent = `${(d.lo + PLATE_CENTER_Y).toFixed(2)}·${(d.hi + PLATE_CENTER_Y).toFixed(2)}`;
-    hudEls.rng.style.color = pinned_now() ? '#f2a33c' : '#8fa3bf';
-  } else {
-    hudEls.rng.textContent = '--';
-    hudEls.rng.style.color = '#e5484d';
-  }
-}
-// RNG glows amber only while Q/E is pushing the body against its ceiling/floor
-function pinned_now() {
-  const supY = g_diag.planted ? (g_diag.lo + g_diag.hi) * 0.5 - PLATE_CENTER_Y : 0;
-  return Math.abs(body.heightOffset) > 0.02 &&
-    (body.pos.y > supY + MAX_RISE - 0.02 || body.pos.y < FLOOR_ROOT_Y + 0.02);
+  statusCell('t-state', STATE_LABEL[d.state] ?? d.state,
+    d.unstable || d.danger > 0 ? 'err' : STATE_TONE[d.state] ?? '');
+  statusCell('t-speed', d.vel.toFixed(2));
+  statusCell('t-tilt', d.tilt.toFixed(0) + '°', d.tilt > 12 ? 'warn' : '');
+  statusCell('t-feet', d.planted, d.planted < 4 ? 'err' : '');
+  statusCell('t-sat', d.sat, d.sat > 0 ? 'warn' : 'ok');
+  statusCell('t-blocked', d.danger, d.danger > 0 ? 'err' : 'ok');
+  statusCell('t-strand', d.strand, d.strand > 0 ? 'warn' : '');
+  statusCell('t-climb', d.walled, d.walled > 0 ? 'warn' : '');
 }
 
-// ---------------------------------------------------------------- POV camera
+// --- POV camera ------------------------------------------------------------
 const povCam = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.02, 200);
 window.addEventListener('resize', () => { povCam.aspect = window.innerWidth / window.innerHeight; povCam.updateProjectionMatrix(); });
 
-// ---------------------------------------------------------------- boot + loop
+// --- boot + loop -----------------------------------------------------------
 const clock = new THREE.Clock();
 
 // --- boot hardening (presentation-only; does not touch locomotion) -----------
@@ -1524,7 +1407,6 @@ function tick() {
   catch (err) { bootWarn('initial IK solve', err); }
   try { buildTelemetry(); } catch (err) { bootWarn('buildTelemetry', err); }
   try { buildContactPanel(); } catch (err) { bootWarn('buildContactPanel', err); }
-  try { buildStatusHUD(); } catch (err) { bootWarn('buildStatusHUD', err); }
   try { updateModeUI(); } catch (err) { bootWarn('updateModeUI', err); }
   boot.done();
   window.__PG = {

@@ -106,7 +106,7 @@ export function setModelWireframe(model, on) {
   eachMaterial(model, mat => { if ('wireframe' in mat) mat.wireframe = on; });
 }
 
-// ---------------------------------------------------------------- STEP (occt-import-js, lazy wasm)
+// --- STEP (occt-import-js, lazy wasm) --------------------------------------
 
 const OCCT_BASE = 'https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/';
 let _occtPromise = null;
@@ -144,7 +144,7 @@ function groupFromOcct(result) {
   return group;
 }
 
-// ---------------------------------------------------------------- parsing
+// --- parsing ---------------------------------------------------------------
 
 /** Parse a model file from an ArrayBuffer. Returns a Promise<model>. */
 async function parseModel(name, buffer) {

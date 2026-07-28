@@ -82,10 +82,11 @@ def playground_after(page):
     print(f'  servo rows: {rows}')
     assert rows == 8, f'expected 8 legs of telemetry, got {rows}'
     page.locator('#btn-spawn').click()
-    page.wait_for_timeout(900)  # the counter refreshes on the telemetry tick
-    blocks = page.locator('#t-blocks').inner_text()
-    print('  blocks:', blocks)
-    assert blocks == '1', f'spawn did not register: {blocks}'
+    # The counter refreshes on the telemetry tick, which is frame-rate bound, so
+    # wait on the value rather than on a fixed delay that a slow frame outlasts.
+    page.wait_for_function(
+        "() => document.getElementById('t-blocks').textContent === '1'", timeout=15_000)
+    print('  blocks:', page.locator('#t-blocks').inner_text())
     page.keyboard.down('w')
     page.wait_for_timeout(2500)
     page.keyboard.up('w')
