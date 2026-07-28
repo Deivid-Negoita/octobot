@@ -1,107 +1,34 @@
-Comment,Designator,Footprint,LCSC
-SY8303AIC,IC1,SOT65P280X110-8N,
-~,Pad_pin_7,pad_pin_03,
-LED,D1,LED_0201_0603Metric,
-100uF,C11,CAPAE660X770N,
-"8,2 nH",L1,L_0402_1005Metric,
-10K,R5,R_0603_1608Metric,
-18pF,C2,C_0603_1608Metric,
-"4,7 pF",C15,C_01005_0402Metric,
-"0,1uF",C6,C_0603_1608Metric,
-220 Ohm,R2,R_0603_1608Metric,
-~,Pad_pin_11,pad_pin_03,
-"1,5 pF",C13,C_01005_0402Metric,
-~,Pad_pin_9,pad_pin_03,
-T491A106K016AT,C24,T491A,
-33nF,C28,C_0805_2012Metric,
-T491A106K016AT,C25,T491A,
-TL3365AF180QG,S2,SW_TL3365AF180QG,
-18pF,C1,C_0603_1608Metric,
-1uF,C3,C_0805_2012Metric,
-10nF,C21,C_0603_1608Metric,
-~,Pad_pin_15,pad_pin_03,
-10K,R11,R_0603_1608Metric,
-"3,9 nH",L3,L_0402_1005Metric,
-"0,1uF",C33,C_0603_1608Metric,
-Conn_01x02_Pin,J6,PinHeader_1x02_P1.27mm_Vertical,
-10uF,C32,C_0805_2012Metric,
-10nF,C23,C_0603_1608Metric,
-Conn_01x02_Pin,J4,PinHeader_1x02_P1.27mm_Vertical,
-1 pF,C16,C_01005_0402Metric,
-33nF,C27,C_0805_2012Metric,
-Conn_01x03,J16,PinHeader_1x03_P1.27mm_Vertical,
-~,Pad_pin_14,pad_pin_03,
-"2,7 nH",L2,L_0402_1005Metric,
-TLE9201SG,U1,SOP100P1030X260-13N,
-TLE9201SG,U3,SOP100P1030X260-13N,
-SSA34-E3_61T,D2,DIOM5127X229N,
-~,Pad_pin_8,pad_pin_03,
-ATMEGA32U4TQFP-44,U2,TQFP44,
-~,Pad_pin_6,pad_pin_03,
-Conn_01x01_Pin,J13,PinHeader_1x01_P1.27mm_Vertical,
-10K,R15,R_0603_1608Metric,
-Conn_01x01_Pin,J12,PinHeader_1x01_P1.27mm_Vertical,
-22K,R7,R_01005_0402Metric,
-22K,R10,R_0805_2012Metric,
-18pF,C18,C_0603_1608Metric,
-18pF,C17,C_0603_1608Metric,
-12 pF,C36,C_1206_3216Metric,
-"0,1uF",C8,C_0603_1608Metric,
-10K,R9,R_0805_2012Metric,
-~,Pad_pin_13,pad_pin_03,
-~,Pad_pin_1,pad_pin_03,
-10uF,C34,C_0805_2012Metric,
-Conn_01x02_Pin,J5,PinHeader_1x02_P1.27mm_Vertical,
-Conn_01x02_Pin,J3,PinHeader_1x02_P1.27mm_Vertical,
-"0,1uF",C31,C_0603_1608Metric,
-"2,2 nF",C14,C_01005_0402Metric,
-100 nF,C10,C_0603_1608Metric,
-~,Pad_pin_16,pad_pin_03,
-AVR-ISP,U5,AVR-ISP,
-10nF,C22,C_0603_1608Metric,
-110K Ohm,R13,R_0805_2012Metric,
-33nF,C29,C_0805_2012Metric,
-SMA-J-P-H-ST-EM1,J11,SMA_Samtec_SMA-J-P-X-ST-EM1_EdgeMount,
-"4,7 uH",L4,7447714220,
-Crystal_GND24,Y2,CRYSTAL-SMD-5X3.2-4PAD,
-~,Pad_pin_10,pad_pin_03,
-CMT-1032-85-SMT-TR,LS1,CMT103285SMTTR,
-220 Ohm,R3,R_0603_1608Metric,
-NRF24L01,U4,QFN-20-1EP_4x4mm_P0.5mm_EP2.5x2.5mm,
-Conn_01x03,J17,PinHeader_1x03_P1.27mm_Vertical,
-Conn_01x03,J15,PinHeader_1x03_P1.27mm_Vertical,
-33nF,C26,C_0805_2012Metric,
-10K,R8,R_0603_1608Metric,
-10uF,C35,C_0805_2012Metric,
-1x2,J2,PinHeader_1x02_P2.54mm_Vertical,
-REG1117-3.3,IC2,SOT230P700X180-4N,
-100K Ohm,R12,R_0805_2012Metric,
-10uF,C30,C_0805_2012Metric,
-Conn_01x02_Pin,J8,PinHeader_1x02_P1.27mm_Vertical,
-Conn_01x04,J14,PinHeader_1x04_P2.54mm_Vertical,
-Conn_01x02_Pin,J7,PinHeader_1x02_P1.27mm_Vertical,
-~,Pad_pin_4,pad_pin_03,
-DS04-254-2-03BK-SMT,S3,DS04254203BKSMT,
-3314S-3-103E,VR1,3314S1501E,
-~,Pad_pin_2,pad_pin_03,
-1K,R4,R_1206_3216Metric,
-~,Pad_pin_3,pad_pin_03,
-2.1K,R16,R_0603_1608Metric,
-TL3365AF180QG,S1,SW_TL3365AF180QG,
-"0,1uF",C7,C_0603_1608Metric,
-~,Pad_pin_5,pad_pin_03,
-Mini - B,J1,USB-MINIB,
-1M,R6,R_01005_0402Metric,
-~,Pad_pin_12,pad_pin_03,
-33 nF,C19,C_01005_0402Metric,
-Crystal_GND24,Y1,CRYSTAL-SMD-5X3.2-4PAD,
-SSA34-E3_61T,D3,DIOM5127X229N,
-15K Ohm,R14,R_0805_2012Metric,
-1uF,C4,C_0805_2012Metric,
-10nF,C12,C_1206_3216Metric,
-Conn_01x02,J9,PinHeader_1x02_P2.54mm_Vertical,
-1K,R1,R_1206_3216Metric,
-10uF,C20,C_0805_2012Metric,
-1uF,C9,C_0603_1608Metric,
-Conn_01x02,J10,PinHeader_1x02_P2.54mm_Vertical,
-"0,1uF",C5,C_0603_1608Metric,
+﻿designator,quantity,value,pack,mpn,mount_type
+"C1, C3",2,18pF,C_0603_1608Metric,,smt
+C16,1,12 pF,C_1206_3216Metric,,smt
+"C17, C21",2,"0,1uF",C_0603_1608Metric,,smt
+"C18, C19, C22, C23, C4, C5",6,10uF,C_0805_2012Metric,,smt
+"C2, C8",2,1uF,C_0805_2012Metric,,smt
+C20,1,10nF,C_1206_3216Metric,,smt
+"C6, C9",2,875075161013,CAPAE1030X1240N,,smt
+C7,1,0.1uF,C_0805_2012Metric,,smt
+"D1, D3, D4",3,LED,LED_0201_0603Metric,,smt
+D5,1,HPZR-C10X,HPZRC10X,,smt
+IC1,1,SY8303AIC,SOT65P280X110-8N,,smt
+J1,1,47346-0001,MOLEX_47346-0001,,smt
+"J10, J11, J12, J13, J14, J17, J18, J19, J2, J20, J21, J22, J23, J24, J25, J26, J27, J28, J29, J3, J30, J32, J33, J4, J5, J6, J7, J8",28,Conn_01x03_Pin,PinHeader_1x03_P2.54mm_Vertical,,tht
+J15,1,Conn_01x04_Pin,PinHeader_1x04_P2.54mm_Vertical,,tht
+"J16, J31, J34, J9",4,1x2,PinHeader_1x02_P2.54mm_Vertical,,tht
+L1,1,"4,7 uH",7447714220,,smt
+Q1,1,RQ3E075ATTB,RQ3E075ATTB,,smt
+"R1, R10, R14, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R5, R8",20,10K,R_0603_1608Metric,,smt
+R11,1,110K Ohm,R_0805_2012Metric,,smt
+R12,1,15K Ohm,R_0805_2012Metric,,smt
+R13,1,100K Ohm,R_0805_2012Metric,,smt
+R15,1,100K,R_1206_3216Metric,,smt
+"R2, R3",2,22 Ohm,R_0603_1608Metric,,smt
+"R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R42, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54",24,220 Ohm,R_0603_1608Metric,,smt
+R4,1,10KOhm,R_0603_1608Metric,,smt
+R6,1,1KOhm,R_0603_1608Metric,,smt
+"R7, R9",2,1K,R_0402_1005Metric,,smt
+"S1, S2",2,TL3365AF180QG,SW_TL3365AF180QG,,smt
+S3,1,DS04-254-2-03BK-SMT,DS04254203BKSMT,,smt
+"U1, U2",2,PCA9685PW/Q900_118,SOP65P640X110-28N,,smt
+U3,1,ATmega32U4-M,QFN-44-1EP_7x7mm_P0.5mm_EP5.2x5.2mm,,smt
+U4,1,AVR-ISP,AVR-ISP,,tht
+Y1,1,Crystal_GND24,CRYSTAL-SMD-5X3.2-4PAD,,smt

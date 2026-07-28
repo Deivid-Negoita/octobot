@@ -1,0 +1,121 @@
+﻿pos_x,pos_y,rotation,side,designator,mpn,pack,value,mount_type,place
+129.475,-107.4,180.0,top,C1,,C_0603_1608Metric,18pF,smt,True
+150.5,-103.525,180.0,top,C16,,C_1206_3216Metric,12 pF,smt,True
+155.35,-104.35,0.0,top,C17,,C_0603_1608Metric,"0,1uF",smt,True
+158.7,-104.25,180.0,top,C18,,C_0805_2012Metric,10uF,smt,True
+162.1,-104.25,0.0,top,C19,,C_0805_2012Metric,10uF,smt,True
+125.15,-107.125,90.0,top,C2,,C_0805_2012Metric,1uF,smt,True
+150.625,-112.825,-90.0,top,C20,,C_1206_3216Metric,10nF,smt,True
+143.875,-109.4,0.0,top,C21,,C_0603_1608Metric,"0,1uF",smt,True
+143.875,-105.65,180.0,top,C22,,C_0805_2012Metric,10uF,smt,True
+143.875,-107.65,180.0,top,C23,,C_0805_2012Metric,10uF,smt,True
+126.25,-102.075,-90.0,top,C3,,C_0603_1608Metric,18pF,smt,True
+187.625,-103.75,90.0,top,C4,,C_0805_2012Metric,10uF,smt,True
+85.325,-103.775,90.0,top,C5,,C_0805_2012Metric,10uF,smt,True
+155.875,-97.575,180.0,top,C6,,CAPAE1030X1240N,875075161013,smt,True
+142.5,-101.925,-90.0,top,C7,,C_0805_2012Metric,0.1uF,smt,True
+136.9,-97.575,0.0,top,C8,,C_0805_2012Metric,1uF,smt,True
+117.5,-109.425,0.0,top,C9,,CAPAE1030X1240N,875075161013,smt,True
+147.775,-101.85,180.0,top,D1,,LED_0201_0603Metric,LED,smt,True
+141.405,-106.975,0.0,top,D3,,LED_0201_0603Metric,LED,smt,True
+147.5,-102.725,180.0,top,D4,,LED_0201_0603Metric,LED,smt,True
+147.125,-112.2,0.0,top,D5,,HPZRC10X,HPZR-C10X,smt,True
+147.225,-108.75,-90.0,top,IC1,,SOT65P280X110-8N,SY8303AIC,smt,True
+128.925,-114.3725,0.0,top,J1,,MOLEX_47346-0001,47346-0001,smt,True
+189.525,-95.765,90.0,top,J10,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+189.525,-93.225,90.0,top,J11,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+173.65,-98.28,-90.0,top,J12,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+173.65,-95.74,-90.0,top,J13,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+173.65,-93.2,-90.0,top,J14,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+132.225,-93.5,90.0,top,J15,,PinHeader_1x04_P2.54mm_Vertical,Conn_01x04_Pin,tht,True
+197.15,-102.675,0.0,top,J16,,PinHeader_1x02_P2.54mm_Vertical,1x2,tht,True
+99.45,-108.985,90.0,top,J17,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+99.45,-111.525,90.0,top,J18,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+99.45,-114.075,90.0,top,J19,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+189.525,-108.995,90.0,top,J2,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+83.575,-108.995,-90.0,top,J20,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+83.575,-111.535,-90.0,top,J21,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+83.575,-114.075,-90.0,top,J22,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+99.45,-98.305,90.0,top,J23,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+99.45,-95.765,90.0,top,J24,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+99.45,-93.225,90.0,top,J25,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+83.575,-98.305,-90.0,top,J26,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+83.575,-95.765,-90.0,top,J27,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+83.575,-93.225,-90.0,top,J28,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+165.925,-101.085,0.0,top,J29,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+189.525,-111.535,90.0,top,J3,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+107.175,-101.085,0.0,top,J30,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+109.61,-93.225,0.0,top,J31,,PinHeader_1x02_P2.54mm_Vertical,1x2,tht,True
+142.505,-93.5,90.0,top,J32,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+124.575,-93.5,90.0,top,J33,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+76.15,-102.675,0.0,top,J34,,PinHeader_1x02_P2.54mm_Vertical,1x2,tht,True
+189.525,-114.075,90.0,top,J4,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+173.65,-108.995,-90.0,top,J5,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+173.65,-111.535,-90.0,top,J6,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+173.65,-114.075,-90.0,top,J7,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+189.525,-98.305,90.0,top,J8,,PinHeader_1x03_P2.54mm_Vertical,Conn_01x03_Pin,tht,True
+135.2125,-113.9375,90.0,top,J9,,PinHeader_1x02_P2.54mm_Vertical,1x2,tht,True
+158.4,-110.2,180.0,top,L1,,7447714220,"4,7 uH",smt,True
+142.825,-113.075,180.0,top,Q1,,RQ3E075ATTB,RQ3E075ATTB,smt,True
+181.5,-109.6,-90.0,top,R1,,R_0603_1608Metric,10K,smt,True
+184.45,-109.6,-90.0,top,R10,,R_0603_1608Metric,10K,smt,True
+150.5,-105.675,180.0,top,R11,,R_0805_2012Metric,110K Ohm,smt,True
+150.6,-107.725,0.0,top,R12,,R_0805_2012Metric,15K Ohm,smt,True
+147.2,-105.7,180.0,top,R13,,R_0805_2012Metric,100K Ohm,smt,True
+150.525,-109.625,0.0,top,R14,,R_0603_1608Metric,10K,smt,True
+147.1,-114.125,180.0,top,R15,,R_1206_3216Metric,100K,smt,True
+186.925,-96.775,90.0,top,R16,,R_0603_1608Metric,10K,smt,True
+185.45,-96.775,90.0,top,R17,,R_0603_1608Metric,10K,smt,True
+183.975,-96.775,90.0,top,R18,,R_0603_1608Metric,10K,smt,True
+182.5,-96.775,90.0,top,R19,,R_0603_1608Metric,10K,smt,True
+129.85,-109.85,180.0,top,R2,,R_0603_1608Metric,22 Ohm,smt,True
+181.025,-96.775,90.0,top,R20,,R_0603_1608Metric,10K,smt,True
+182.975,-109.6,-90.0,top,R21,,R_0603_1608Metric,10K,smt,True
+85.875,-109.9,-90.0,top,R22,,R_0603_1608Metric,10K,smt,True
+87.35,-109.9,-90.0,top,R23,,R_0603_1608Metric,10K,smt,True
+88.825,-109.9,-90.0,top,R24,,R_0603_1608Metric,10K,smt,True
+90.3,-109.9,-90.0,top,R25,,R_0603_1608Metric,10K,smt,True
+91.775,-109.9,-90.0,top,R26,,R_0603_1608Metric,10K,smt,True
+91.425,-97.925,90.0,top,R27,,R_0603_1608Metric,10K,smt,True
+87.0,-97.925,90.0,top,R28,,R_0603_1608Metric,10K,smt,True
+88.475,-97.925,90.0,top,R29,,R_0603_1608Metric,10K,smt,True
+126.975,-109.875,0.0,top,R3,,R_0603_1608Metric,22 Ohm,smt,True
+89.95,-97.925,90.0,top,R30,,R_0603_1608Metric,10K,smt,True
+193.15,-107.175,180.0,top,R31,,R_0603_1608Metric,220 Ohm,smt,True
+193.15,-105.775,180.0,top,R32,,R_0603_1608Metric,220 Ohm,smt,True
+193.15,-104.375,180.0,top,R33,,R_0603_1608Metric,220 Ohm,smt,True
+169.95,-107.175,0.0,top,R34,,R_0603_1608Metric,220 Ohm,smt,True
+169.95,-105.775,0.0,top,R35,,R_0603_1608Metric,220 Ohm,smt,True
+169.95,-104.375,0.0,top,R36,,R_0603_1608Metric,220 Ohm,smt,True
+193.15,-100.175,180.0,top,R37,,R_0603_1608Metric,220 Ohm,smt,True
+193.15,-101.575,180.0,top,R38,,R_0603_1608Metric,220 Ohm,smt,True
+193.15,-102.975,180.0,top,R39,,R_0603_1608Metric,220 Ohm,smt,True
+133.775,-97.55,0.0,top,R4,,R_0603_1608Metric,10KOhm,smt,True
+169.95,-100.165,0.0,top,R40,,R_0603_1608Metric,220 Ohm,smt,True
+169.95,-101.565,0.0,top,R41,,R_0603_1608Metric,220 Ohm,smt,True
+169.95,-102.975,0.0,top,R42,,R_0603_1608Metric,220 Ohm,smt,True
+103.175,-107.175,180.0,top,R43,,R_0603_1608Metric,220 Ohm,smt,True
+103.175,-105.775,180.0,top,R44,,R_0603_1608Metric,220 Ohm,smt,True
+103.175,-104.375,180.0,top,R45,,R_0603_1608Metric,220 Ohm,smt,True
+79.95,-107.2,0.0,top,R46,,R_0603_1608Metric,220 Ohm,smt,True
+79.95,-105.8,0.0,top,R47,,R_0603_1608Metric,220 Ohm,smt,True
+79.95,-104.4,0.0,top,R48,,R_0603_1608Metric,220 Ohm,smt,True
+103.175,-100.175,180.0,top,R49,,R_0603_1608Metric,220 Ohm,smt,True
+185.925,-109.6,-90.0,top,R5,,R_0603_1608Metric,10K,smt,True
+103.175,-101.575,180.0,top,R50,,R_0603_1608Metric,220 Ohm,smt,True
+103.175,-102.975,180.0,top,R51,,R_0603_1608Metric,220 Ohm,smt,True
+79.95,-100.2,0.0,top,R52,,R_0603_1608Metric,220 Ohm,smt,True
+79.95,-101.6,0.0,top,R53,,R_0603_1608Metric,220 Ohm,smt,True
+79.95,-103.0,0.0,top,R54,,R_0603_1608Metric,220 Ohm,smt,True
+145.575,-103.925,180.0,top,R6,,R_0603_1608Metric,1KOhm,smt,True
+145.775,-102.625,0.0,top,R7,,R_0402_1005Metric,1K,smt,True
+145.575,-101.1,0.0,top,R8,,R_0603_1608Metric,10K,smt,True
+141.24,-108.0,0.0,top,R9,,R_0402_1005Metric,1K,smt,True
+128.1475,-98.125,180.0,top,S1,,SW_TL3365AF180QG,TL3365AF180QG,smt,True
+144.05,-98.45,0.0,top,S2,,SW_TL3365AF180QG,TL3365AF180QG,smt,True
+117.485,-98.325,180.0,top,S3,,DS04254203BKSMT,DS04-254-2-03BK-SMT,smt,True
+181.45,-103.825,-90.0,top,U1,,SOP65P640X110-28N,PCA9685PW/Q900_118,smt,True
+91.5,-103.825,90.0,top,U2,,SOP65P640X110-28N,PCA9685PW/Q900_118,smt,True
+136.5,-103.625,-90.0,top,U3,,QFN-44-1EP_7x7mm_P0.5mm_EP5.2x5.2mm,ATmega32U4-M,smt,True
+136.9,-110.45,0.0,top,U4,,AVR-ISP,AVR-ISP,tht,True
+128.9875,-103.6375,90.0,top,Y1,,CRYSTAL-SMD-5X3.2-4PAD,Crystal_GND24,smt,True
