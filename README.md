@@ -6,6 +6,9 @@ rigs the CAD model and solves its inverse kinematics.
 
 ![The IK workbench with the octobot rigged into eight legs](docs/images/workbench.png)
 
+**The workbench runs live in the browser:
+<https://deivid-negoita.github.io/octobot/>** — no install, no build step.
+
 The robot carries environmental-monitoring, 3D-scanning and speleological
 payloads. Those payloads need the legs to place feet accurately on uneven
 ground, which a fixed gait cannot do. The kinematics workbench in this
@@ -28,11 +31,11 @@ The embedded firmware lives in a separate repository and is not included here.
 
 ## Run the kinematics workbench
 
-The workbench is a static site, so it also runs on GitHub Pages straight from
-this repository. `.github/workflows/pages.yml` publishes `kinematics/` on every
-push to `main`. Enable it once under **Settings → Pages → Source → GitHub
-Actions**, and the workbench is then live at
-`https://<your-github-username>.github.io/octobot/`.
+The workbench runs in the browser with nothing to install:
+**<https://deivid-negoita.github.io/octobot/>**. It is a static site, published
+from `kinematics/` by `.github/workflows/pages.yml` on every push to `main`. A
+fork gets its own copy after enabling **Settings → Pages → Source → GitHub
+Actions** once.
 
 To run it locally instead: the pages load ES modules, so they need an HTTP
 server. Opening `index.html` from the filesystem gives you a blank screen and a
