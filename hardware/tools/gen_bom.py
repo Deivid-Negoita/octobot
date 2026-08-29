@@ -181,8 +181,8 @@ def as_markdown(rows, total):
                    f"{r['package']} | {compress(r['refs'])} | {r['function']} |")
     tht = sum(r['qty'] for r in rows if r['mount'] == 'THT')
     out.append('')
-    out.append(f'**{total} placements over {len(rows)} lines — '
-               f'{total - tht} SMT, {tht} through-hole.**')
+    out.append(f'**{total} placements over {len(rows)} lines: '
+               f'{total - tht} SMT and {tht} through-hole.**')
     return '\n'.join(out)
 
 

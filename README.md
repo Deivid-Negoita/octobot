@@ -7,7 +7,8 @@ rigs the CAD model and solves its inverse kinematics.
 ![The IK workbench with the octobot rigged into eight legs](docs/images/workbench.png)
 
 **The workbench runs live in the browser:
-<https://deivid-negoita.github.io/octobot/>** — no install, no build step.
+<https://deivid-negoita.github.io/octobot/>**. It needs no install and no
+build step.
 
 The robot carries environmental-monitoring, 3D-scanning and speleological
 payloads. Those payloads need the legs to place feet accurately on uneven
@@ -51,14 +52,14 @@ takes a few seconds. A progress bar reports the download.
 
 Two pages share the model:
 
-**`index.html` — IK workbench.** The CAD model rigs itself on startup. The
+**`index.html`, the IK workbench.** The CAD model rigs itself on startup. The
 loader finds the feet from the mesh geometry, then builds a hip-yaw →
 shoulder-pitch → knee-pitch chain per leg on the real servo shaft axes. It binds
 every servo, bracket and casing to the link it is screwed to. You get eight
 chains named `LEG-1` to `LEG-8`. Drag the cyan target and that leg solves toward
 it in real time while the servo angles update. Press `Space` to run a gait.
 
-**`playground.html` — locomotion sandbox.** Drive the robot with `W A S D` over
+**`playground.html`, the locomotion sandbox.** Drive the robot with `W A S D` over
 terrain blocks you spawn and drag. The feet land on the block surface or the
 ground by analytic sampling, and the body rides at the average support height.
 Live servo angles for all 24 joints stream into the telemetry panel.
@@ -105,7 +106,7 @@ rail split, the power path and the pin assignment of every header.
 
 ### Bill of materials
 
-120 placements over 33 lines — 87 SMT, 33 through-hole. The table is read out of
+120 placements over 33 lines: 87 SMT and 33 through-hole. The table is read out of
 the layout by [`hardware/tools/gen_bom.py`](hardware/tools/gen_bom.py) rather
 than typed. `--check` re-groups the fabrication BOM the same way and compares it
 designator by designator, so this list cannot quietly go stale:
@@ -153,7 +154,7 @@ python hardware/tools/gen_bom.py --check
 | 1 | `10nF` | — | C_1206_3216Metric | C20 | Buck bootstrap. |
 | 1 | `12 pF` | — | C_1206_3216Metric | C16 | Buck feedback feed-forward. |
 
-**120 placements over 33 lines — 87 SMT, 33 through-hole.**
+**120 placements over 33 lines: 87 SMT and 33 through-hole.**
 
 <!-- BOM:END -->
 
@@ -210,4 +211,4 @@ mechanics.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
