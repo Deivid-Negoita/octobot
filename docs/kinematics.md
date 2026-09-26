@@ -78,6 +78,14 @@ and produced folded, curled leg poses. The tighter values cost nothing
 measurable — identical climb heights, walking distance within 3% — and cut the
 deepest mesh penetration from 153 mm to 61 mm.
 
+The shoulder limit is the one that binds on a step. In OmniLink's simulation
+of a fixed-height gait, climbing a 48 mm block used the full shoulder range
+(1.000 of the limit above), against 0.37 on flat ground. That held at 0.92,
+1.08 and 1.50 N·m alike. So this is a position limit, not a torque one:
+with body height fixed, the climb has to come from the shoulder. The knees never
+used more than 53 % of their range. The playground raises the body over
+terrain, which spreads that climb across the legs.
+
 ---
 
 ## Collision guard
@@ -126,6 +134,19 @@ The playground uses closed-form IK instead of an iterative solver: yaw plus a
 two-link planar solution per leg. Parts cannot detach and the solve is exact.
 Hinge signs are calibrated at load by probing each servo. The sign depends on
 how the servo is mounted, and the CAD does not record that.
+
+### Reading a gait log
+
+Two signals from OmniLink's torque sweep are worth checking before trusting a
+run:
+
+- **A stalled gait still reports finished.** Below the collapse torque the
+  robot stays upright and stops moving. A completion flag is not evidence that
+  it walked, so check the distance travelled.
+- **Minimum support contacts show weak servos first.** The minimum rose from 0
+  to 2 to 8 feet on the ground as torque fell from 1.50 to 1.08 to 0.92 N·m.
+  The swing legs could not lift clear. This shows up before the distance
+  number moves much.
 
 ---
 

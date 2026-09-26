@@ -52,6 +52,28 @@ Those headers are wired GND / rail / `VIN`, which gives two options per rail:
 Two independently fed rails keep one leg group's current spikes out of the
 other, and keep both out of the logic supply.
 
+### Which servo voltage
+
+Feed both servo rails at 6.0 V. The MG996R is rated 9.4 kgf·cm at 4.8 V and
+11 kgf·cm at 6.0 V, which is 0.92 and 1.08 N·m.
+
+The OmniLink team ran the gait in their simulator at both points. The results
+are theirs, not measured on the robot:
+
+| Servo torque | 1.08 N·m (6.0 V) | 0.92 N·m (4.8 V) |
+|---|---|---|
+| Flat-ground travel lost | 2.8 % | 4.3 % |
+| Margin over the collapse point | 1.8× | 1.5× |
+
+Both voltages walk. Sweeping the torque down, the gait stops working between
+0.35 and 0.42 N·m on flat ground and between 0.50 and 0.60 N·m climbing a 48 mm
+block, so the block sets the limit.
+
+Their run assumed a 3.0 kg robot, because the BOM covers only the electronics
+and the STEP solids are not watertight. By their extrapolation, the block gait
+runs out of margin near 5.4 kg at 6 V or 4.6 kg at 4.8 V. **Weigh the assembled
+robot.** That one figure would change these margins more than any other input.
+
 ## Servo channels
 
 24 three-pin headers, each wired GND / rail / signal:
