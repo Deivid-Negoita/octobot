@@ -4,9 +4,9 @@ An eight-legged walking robot with 24 servos, built end to end. The chassis and
 legs are CAD. A custom ATmega32U4 board drives every servo. A browser workbench
 rigs the CAD model and solves its inverse kinematics.
 
-[![OctoBot in 22 seconds: the robot walking, the IK workbench, the controller board](docs/images/octobot-video.jpg)](docs/media/octobot.mp4)
+[![OctoBot in 15 seconds: the robot walking, the IK workbench, the controller board](docs/media/octobot-preview.webp)](https://deivid-negoita.github.io/octobot/)
 
-<sub>22-second walkthrough, recorded from the live app. Music: Sascha Ende, ende.app (CC BY 4.0).</sub>
+<sub>Recorded from the live app. [Download the 15-second MP4 with sound](https://github.com/Deivid-Negoita/octobot/raw/main/docs/media/octobot.mp4). Music: Sascha Ende, ende.app (CC BY 4.0), shortened.</sub>
 
 ![The IK workbench with the octobot rigged into eight legs](docs/images/workbench.png)
 
