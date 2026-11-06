@@ -89,13 +89,14 @@ guard and the gait model.
 
 One board drives all 24 servos. An **ATmega32U4** talks over I²C to **two
 PCA9685** 16-channel PWM drivers, which gives 32 channels for the 24 servos and
-leaves headroom for sensors. An **SY8303** synchronous buck regulator supplies
-the servo rail from the battery, and a P-channel MOSFET on the input protects
+leaves headroom for sensors. An **SY8303** synchronous buck regulator steps the
+input down to the 5 V logic rail, and a P-channel MOSFET on the input protects
 against reverse polarity.
 
 The 24 servo headers sit on two separate power rails of 12, so the inrush of one
-group of legs cannot brown out the other. An **HC-12** radio module plugs into a
-4-pin header on D8 and D9. Running the link on a software UART keeps the
+group of legs cannot brown out the other. Each rail has its own 2-cell 9000 mAh
+LiPo pack with an XT60 connector and a step-down converter. An **HC-12** radio
+module plugs into a 4-pin header on D8 and D9. Running the link on a software UART keeps the
 hardware USART free and lets the antenna sit away from the servo wiring. The
 board is a 4-layer design with 120 placements, an AVR-ISP header, a DIP switch
 and two tactile buttons.

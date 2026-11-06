@@ -46,8 +46,12 @@ rail 2. Each also carries a Würth 875075161013 aluminium electrolytic (`C6`,
 
 Those headers are wired GND / rail / `VIN`, which gives two options per rail:
 
-- Jumper pin 2 to pin 3 to run that block of servos straight off the input pack.
-- Leave the jumper off and feed pin 2 from a separate BEC.
+- Solder-bridge pin 2 to pin 3 to run that block of servos straight off the input pack.
+- Leave the bridge open and feed pin 2 from a separate BEC.
+
+The built robot uses the second option. It runs on two 2-cell 9000 mAh LiPo packs
+with XT60 connectors, one pack per servo block. Each pack goes through its own
+step-down converter into the rail header of that block.
 
 Two independently fed rails keep one leg group's current spikes out of the
 other, and keep both out of the logic supply.
